@@ -48,7 +48,7 @@ USAGE
 
 INSTALLATION
 --------------
-This assumes a UNIX environment with ImageMagick installed.
+This assumes a UNIX environment with ImageMagick installed, and that a packaged release is being installed. To installed from a clone of the repository, run `autoreconf -i` beforehand (requires the GNU Autotools).
 
 Enter the project's base directory and type
 	./configure && make
