@@ -1,5 +1,6 @@
 ktech
 ==========
+A Unix converter for Klei Entertainment's KTEX texture format.
 
 LICENSE
 ---------
