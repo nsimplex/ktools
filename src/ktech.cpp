@@ -196,7 +196,10 @@ int main(int argc, char* argv[]) {
 
 		bool output_has_extension = process_paths(input_path, output_path);
 
-		assert( input_path != "-" );
+		cout << "in: " << input_path << endl;
+		cout << "out: " << output_path << endl;
+
+		//assert( input_path != "-" );
 
 		if(KTech::KTEX::File::isKTEXFile(input_path)) {
 			if(!output_has_extension)

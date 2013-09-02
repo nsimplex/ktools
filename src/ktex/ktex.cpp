@@ -447,6 +447,7 @@ void KTech::KTEX::File::CompressFrom(Magick::Image img) {
 
 		if(i + 1 < mipmap_count) {
 			assert( width > 0 && height > 0 );
+			img.filterType( options::filter );
 			img.resize( Magick::Geometry(width, height) );
 		}
 	}

@@ -52,6 +52,6 @@ This assumes a UNIX environment with ImageMagick installed, and that a packaged 
 
 Enter the project's base directory and type
 	./configure && make
-If compilation runs without errors, the executable ktech will be placed in this directory. Move/copy it to wherever you want it. As an optional final step,
+If compilation runs without errors, the executable ktech will be placed in your current directory. Move/copy it to wherever you want it. As an optional final step,
 	sudo make install
 will perform a system-wide installation of ktech.

@@ -43,7 +43,7 @@ bool KTech::isDirectory(const std::string& path) {
 	struct stat st;
 
 	if(stat(path.c_str(), &st) != 0) {
-		throw Error(strerror(errno));
+		return false;
 	}
 
 	return S_ISDIR(st.st_mode);
