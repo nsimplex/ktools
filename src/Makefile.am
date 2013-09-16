@@ -5,8 +5,7 @@ ktech_SOURCES = ktech.cpp ktech_options.cpp ktech_fs.cpp ktex/ktex.cpp ktex/spec
 
 AM_CPPFLAGS = $(DEPS_CFLAGS) -I$(top_srcdir)/lib
 
-ktech_LDFLAGS = $(DEPS_LIBS)
-ktech_LDADD = $(top_srcdir)/lib/squish/libsquish.a
+ktech_LDADD = $(top_srcdir)/lib/squish/libsquish.a $(DEPS_LIBS)
 
 
 all-local: ktech
