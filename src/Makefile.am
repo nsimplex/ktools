@@ -8,7 +8,10 @@ AM_CPPFLAGS = $(DEPS_CFLAGS) -I$(top_srcdir)/lib
 ktech_LDADD = $(top_srcdir)/lib/squish/libsquish.a $(DEPS_LIBS)
 
 
-all-local: ktech
+
+all-local: $(top_srcdir)/ktech
+
+$(top_srcdir)/ktech: ktech
 	-cp ktech $(top_srcdir)
 
 clean-local:

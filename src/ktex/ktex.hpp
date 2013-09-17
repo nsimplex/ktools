@@ -147,8 +147,6 @@ namespace KTech {
 					Mipmaps = new Mipmap[howmany];
 			}
 
-			int getSquishCompressionFlag(bool& isnone) const;
-
 			// We use int for compliance with squish.
 			Magick::Blob getRGBA(int& width, int& height) const;
 

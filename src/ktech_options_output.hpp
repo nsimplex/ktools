@@ -39,19 +39,14 @@ namespace KTech {
 			typedef std::map<categories_list_t::value_type, size_t> categories_inverse_t;
 			categories_inverse_t categories_inverse;
 
-			// Map of option flags to category indexes.
-			typedef std::map<char, size_t> category_map_t;
+			// Map of options to category indexes.
+			typedef std::map<const TCLAP::Arg*, size_t> category_map_t;
 			category_map_t category_map;
 
 			size_t get_arg_category_idx(const TCLAP::Arg* a) const {
-				const std::string& flag_str = a->getFlag();
-				if(flag_str.length() == 0) {
-					// Put it at the end.
-					return categories.size();
-				}
-
-				category_map_t::const_iterator it = category_map.find(flag_str[0]);
+				category_map_t::const_iterator it = category_map.find(a);
 				
+				// Put it at the end.
 				if(it == category_map.end()) {
 					return categories.size();
 				}
@@ -113,12 +108,7 @@ namespace KTech {
 					throw( Error("Invalid argument category '" + cat + "'") );
 				}
 
-				const std::string& flag_str = a.getFlag();
-				if(flag_str.length() == 0) {
-					throw( Error("Argument has a zero-length flag.") );
-				}
-
-				category_map.insert( std::make_pair(flag_str[0], it->second) );
+				category_map.insert( std::make_pair(&a, it->second) );
 			}
 
 			virtual void usage(TCLAP::CmdLineInterface& c);

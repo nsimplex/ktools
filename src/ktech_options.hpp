@@ -33,6 +33,10 @@ namespace KTech {
 		extern int image_quality;
 
 		extern Magick::FilterTypes filter;
+
+		extern bool no_premultiply;
+
+		extern bool no_mipmaps;
 	}
 }
 

@@ -45,7 +45,14 @@ static const valpair_t compression_values[] = {
 	{"DXT1", 0},
 	{"DXT3", 1},
 	{"DXT5", 2},
-	{"None", 4}
+	{"RGBA", 4},
+	{"RGB", 5}
+
+	/*
+	{"atitc", 8},
+	{"atitc_a_e", 9},
+	{"atitc_a_i", 10},
+	*/
 };
 
 static const valpair_t texturetype_values[] = {

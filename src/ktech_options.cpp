@@ -48,13 +48,17 @@ static const char option_brackets[2][2] = { {'[', ']'}, {'<', '>'} };
 
 namespace KTech {
 	namespace options {
-		int verbosity;
+		int verbosity = 0;
 
-		bool info;
+		bool info = false;
 
-		int image_quality;
+		int image_quality = 100;
 
-		Magick::FilterTypes filter;
+		Magick::FilterTypes filter = Magick::LanczosFilter;
+
+		bool no_premultiply = false;
+
+		bool no_mipmaps = false;
 	}
 }
 
@@ -253,7 +257,7 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 
 		str_trans comp_trans("compression");
 		ValuesConstraint<string> allowed_comps(comp_trans.opts);
-		MyValueArg<string> compression_opt("c", "compression", "Compression type for TEX creation. 'none' means plain ARGB. Defaults to " + comp_trans.default_opt + ".", false, comp_trans.default_opt, &allowed_comps);
+		MyValueArg<string> compression_opt("c", "compression", "Compression type for TEX creation. Defaults to " + comp_trans.default_opt + ".", false, comp_trans.default_opt, &allowed_comps);
 		args.push_back(&compression_opt);
 		myOutput.setArgCategory(compression_opt, TO_TEX);
 
@@ -272,6 +276,17 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		MyValueArg<string> type_opt("t", "type", "Target texture type. Defaults to " + type_trans.default_opt + ".", false, type_trans.default_opt, &allowed_types);
 		args.push_back(&type_opt);
 		myOutput.setArgCategory(type_opt, TO_TEX);
+
+		/*
+		SwitchArg no_premultiply_flag("", "no-premultiply", "Don't premultiply alpha.");
+		args.push_back(&no_premultiply_flag);
+		myOutput.setArgCategory(no_premultiply_flag, TO_TEX);
+		*/
+
+		SwitchArg no_mipmaps_flag("", "no-mipmaps", "Don't generate mipmaps.");
+		args.push_back(&no_mipmaps_flag);
+		myOutput.setArgCategory(no_mipmaps_flag, TO_TEX);
+
 
 		/*
 		str_trans plat_trans("platform");
@@ -322,6 +337,12 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		}
 
 		options::filter = filter_trans.translate(filter_opt.getValue());
+
+		/*
+		options::no_premultiply = no_premultiply_flag.getValue();
+		*/
+
+		options::no_mipmaps = no_mipmaps_flag.getValue();
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;
