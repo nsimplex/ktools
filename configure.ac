@@ -15,6 +15,10 @@ AC_CONFIG_HEADERS([config.h])
 AH_BOTTOM([#endif])
 
 
+AC_ARG_ENABLE([cpuextensions],
+	AS_HELP_STRING([--disable-cpuextensions], [Disables use of CPU extensions.]))
+
+
 # Checks for packages
 PKG_CHECK_MODULES([DEPS], [Magick++])
 
@@ -54,11 +58,10 @@ AC_TYPE_UINT32_T
 
 AX_CXXFLAGS_WARN_ALL
 AX_APPEND_COMPILE_FLAGS([-pedantic -Wshadow -Wextra -Wno-unused -Wno-long-long], [CXXFLAGS])
-if test "x$OLD_CXXFLAGS" = "x"; then
-	AX_APPEND_COMPILE_FLAGS([-O3], [CXXFLAGS])
-fi
+AS_IF([! test "x$enable_cpuextensions" = "xno" && test "x$OLD_CXXFLAGS" = "x"],
+	[AX_APPEND_COMPILE_FLAGS([-O3], [CXXFLAGS])])
 
-AS_IF([test "x$ac_cv_cxx_compiler_gnu" = "xyes"], [AX_EXT])
+AS_IF([! test "x$enable_cpuextensions" = "xno" && test "x$ac_cv_cxx_compiler_gnu" = "xyes"], [AX_EXT])
 AM_CONDITIONAL([HAVE_SSE2_EXTENSION], [test "x$ax_cv_have_sse2_ext" = "xyes"])
 AM_CONDITIONAL([HAVE_ALTIVEC_EXTENSION], [test "x$ax_cv_have_altivec_ext" = "xyes"])
 

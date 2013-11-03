@@ -3,7 +3,7 @@ bin_PROGRAMS = ktech
 ktech_SOURCES = ktech.cpp ktech_options.cpp ktech_fs.cpp ktex/ktex.cpp ktex/specs.cpp \
 		ktech.hpp ktech_common.hpp ktech_options.hpp ktech_options_output.hpp ktech_fs.hpp ktex/ktex.hpp ktex/specs.hpp ktex/headerfield_specs.hpp ktex/io.hpp
 
-AM_CPPFLAGS = $(DEPS_CFLAGS) -I$(top_srcdir)/lib
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/lib $(DEPS_CFLAGS)
 
 ktech_LDADD = $(top_srcdir)/lib/squish/libsquish.a $(DEPS_LIBS)
 
