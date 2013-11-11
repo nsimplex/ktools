@@ -190,6 +190,8 @@ static void convert_from_KTEX(const string& input_path, const string& output_pat
  */
 int main(int argc, char* argv[]) {
 	try {
+		Magick::InitializeMagick(argv[0]);
+
 		string input_path;
 		string output_path;
 		KTEX::File::Header configured_header = parse_commandline_options(argc, argv, input_path, output_path);
