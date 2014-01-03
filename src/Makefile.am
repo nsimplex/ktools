@@ -1,7 +1,11 @@
 bin_PROGRAMS = ktech
 
-ktech_SOURCES = ktech.cpp ktech_options.cpp ktech_fs.cpp ktex/ktex.cpp ktex/specs.cpp \
-		ktech.hpp ktech_common.hpp ktech_options.hpp ktech_options_output.hpp ktech_fs.hpp ktex/ktex.hpp ktex/specs.hpp ktex/headerfield_specs.hpp ktex/io.hpp
+ktech_SOURCES = \
+		ktech.cpp ktech_options.cpp \
+		ktech.hpp ktech_common.hpp image_operations.hpp ktech_options.hpp ktech_options_output.hpp \
+		ktex/ktex.cpp ktex/specs.cpp \
+		ktex/ktex.hpp ktex/specs.hpp ktex/headerfield_specs.hpp ktex/io.hpp \
+		compat.hpp compat/common.hpp compat/posix.hpp compat/fs.hpp
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/lib $(DEPS_CFLAGS)
 
