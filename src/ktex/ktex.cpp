@@ -205,11 +205,18 @@ void KTech::KTEX::File::print(std::ostream& out, size_t indentation, const std::
 		prefix += indent_string;
 	}
 
+	const size_t mipmap_count = header.getField("mipmap_count");
+	if(mipmap_count > 0) {
+		std::string local_prefix = prefix + indent_string;
+		const Mipmap& M = Mipmaps[0];
+		out << local_prefix << "width: " << M.width << endl;
+		out << local_prefix << "height: " << M.height << endl;
+	}
+
 	out << prefix << "Header:" << endl;
 	header.print(out, indentation + 1, indent_string);
 
 	if(options::verbosity >= 1) {
-		size_t mipmap_count = header.getField("mipmap_count");
 
 		for(size_t i = 0; i < mipmap_count; ++i) {
 			out << "Mipmap #" << (i + 1) << ":" << endl;

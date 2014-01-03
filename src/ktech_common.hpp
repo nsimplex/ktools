@@ -101,12 +101,20 @@ namespace KTech {
 		U second;
 	};
 
+
+	template<typename T> class Maybe;
+
+	template<typename T> Maybe<T> Just(T val);
+
 	template<typename T>
 	class Maybe {
 		template<typename> friend class Maybe;
+		friend Maybe<T> Just<T>(T);
 
 		bool is_nothing;
 		T val;
+
+		Maybe(T _val) : is_nothing(false), val(_val) {}
 
 	public:
 		Maybe& operator=(const Maybe& m) {
@@ -115,14 +123,7 @@ namespace KTech {
 			return *this;
 		}
 
-		Maybe& operator=(T _val) {
-			is_nothing = false;
-			val = _val;
-			return *this;
-		}
-
 		Maybe() : is_nothing(true) {}
-		Maybe(T _val) { *this = _val; }
 		Maybe(const Maybe& m) { *this = m; }
 
 		template<typename U>
@@ -145,14 +146,18 @@ namespace KTech {
 			}
 			return val;
 		}
-	};
 
-	extern Maybe<bool> Nothing;
+		operator T() const {
+			return value();
+		}
+	};
 
 	template<typename T>
 	Maybe<T> Just(T val) {
 		return Maybe<T>(val);
 	}
+
+	extern Maybe<bool> Nothing;
 }
 
 #endif

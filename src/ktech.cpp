@@ -40,22 +40,22 @@ static bool should_resize() {
 static void resize_image(Magick::Image& img) {
 	size_t w, h;
 	if(options::width != Nothing && options::height != Nothing) {
-		w = options::width.value();
-		h = options::height.value();
+		w = options::width;
+		h = options::height;
 	}
 	else if(options::width != Nothing) {
-		w = options::width.value();
+		w = options::width;
 		h = (w*img.rows())/img.columns();
 	}
 	else if(options::height != Nothing) {
-		h = options::height.value();
+		h = options::height;
 		w = (h*img.columns())/img.rows();
 	}
 	else {
 		return;
 	}
 
-	if(options::verbosity >= 1) {
+	if(options::verbosity >= 0) {
 		std::cout << "Resizing image to " << w << "x" << h << std::endl;
 	}
 
