@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(ktech, 1.1)
+AC_INIT(ktech, 2.0)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
@@ -57,7 +57,7 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 
 AX_CXXFLAGS_WARN_ALL
-AX_APPEND_COMPILE_FLAGS([-pedantic -Wshadow -Wextra -Wno-unused -Wno-long-long], [CXXFLAGS])
+AX_APPEND_COMPILE_FLAGS([-pedantic -Wshadow -Wextra -Wno-long-long], [CXXFLAGS])
 AS_IF([! test "x$enable_cpuextensions" = "xno" && test "x$OLD_CXXFLAGS" = "x"],
 	[AX_APPEND_COMPILE_FLAGS([-O3], [CXXFLAGS])])
 

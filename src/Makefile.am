@@ -11,8 +11,8 @@ ktech_LDADD = $(top_srcdir)/lib/squish/libsquish.a $(DEPS_LIBS)
 
 all-local: $(top_srcdir)/ktech
 
-$(top_srcdir)/ktech: ktech
-	-cp ktech $(top_srcdir)
+$(top_srcdir)/ktech$(EXEEXT): ktech$(EXEEXT)
+	-cp ktech$(EXEEXT) $(top_srcdir)
 
 clean-local:
-	-$(RM) $(top_srcdir)/ktech
+	-$(RM) $(top_srcdir)/ktech$(EXEEXT)

@@ -23,4 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktech_options.hpp"
 #include "ktex/ktex.hpp"
 
+namespace KTech {
+	KTEX::File::Header parse_commandline_options(int& argc, char**& argv, std::string& input_path, std::string& output_path);
+}
+
 #endif

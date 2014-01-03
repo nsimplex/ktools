@@ -344,32 +344,31 @@ static std::string getMagickString(File::Header header) {
 	return internal_flag;
 }
 
-Magick::Image KTech::KTEX::File::Decompress() const {
+KTech::KTEX::File::CompressionFormat KTech::KTEX::File::getCompressionFormat() const {
+	KTech::KTEX::File::CompressionFormat fmt;
+	fmt.squish_flags = getSquishCompressionFlag(header, fmt.is_uncompressed);
+	return fmt;
+}
+
+Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipmap& M, const KTech::KTEX::File::CompressionFormat& fmt) const {
 	Magick::Image img;
 	Magick::Blob B;
 
 	int width, height;
 
-	if(header.getField("mipmap_count") == 0)
+	width = (int)M.width;
+	height = (int)M.height;
+
+	if(width == 0 || height == 0)
 		return img;
 
-	const Mipmap& M = Mipmaps[0];
-	width = M.width;
-	height = M.height;
-
-	if(M.width == 0 || M.height == 0)
-		return img;
-
-	bool is_uncompressed;
-	int squish_flags = getSquishCompressionFlag(header, is_uncompressed);
-
-	if(!is_uncompressed) {
+	if(!fmt.is_uncompressed) {
 		if(options::verbosity >= 0) {
 				std::cout << "Decompressing " << width << "x" << height << " KTEX image into RGBA..." << std::endl;
 		}
-		squish::u8* rgba = new squish::u8[4*M.width*M.height];
-		squish::DecompressImage(rgba, M.width, M.height, M.getData(), squish_flags);
-		B.updateNoCopy(rgba, 4*M.width*M.height);
+		squish::u8* rgba = new squish::u8[4*width*height];
+		squish::DecompressImage(rgba, width, height, M.getData(), fmt.squish_flags);
+		B.updateNoCopy(rgba, 4*width*height);
 		img.read(B, Magick::Geometry(width, height), 8, "RGBA");
 	}
 	else {
@@ -380,17 +379,14 @@ Magick::Image KTech::KTEX::File::Decompress() const {
 			if(magick_str == "RGBA") {
 				std::cout << "RGBA";
 			}
-			else if(magick_str == "RGB") {
-				std::cout << "RGB";
-			}
 			else {
-				throw Error("wat? (magick = " + magick_str + ")");
+				assert( magick_str == "RGB" );
+				std::cout << "RGB";
 			}
 			std::cout << "..." << std::endl;
 		}
 
 		B.update(M.getData(), M.getDataSize());
-
 		img.read(B, Magick::Geometry(width, height), 8, magick_str);
 	}
 
@@ -405,115 +401,50 @@ Magick::Image KTech::KTEX::File::Decompress() const {
 	return img;
 }
 
-void KTech::KTEX::File::CompressFrom(Magick::Image img) {
-	if(options::verbosity >= 0) {
-		std::cout << "Compressing " << img.columns() << "x" << img.rows() << " " << img.magick() << " image into KTEX..." << std::endl;
-	}
-
-	int width = (int)img.columns();
-	int height = (int)img.rows();
-
-	int min_dim = width;
-	if(height < min_dim) {
-		min_dim = height;
-	}
-
-	if(min_dim <= 0) {
-		throw(KleiUtilsError("Attempt to compress an image with a non-positive dimension."));
-	}
-
-	if(!options::no_premultiply) {
-		if(options::verbosity >= 1) {
-			std::cout << "\tPremultiplying alpha..." << std::endl;
-		}
-
-		Magick::Image old = img;
-		img =  Magick::Image(img.size(), "black");
-		img.composite(old, 0, 0, Magick::OverCompositeOp);
-		img.composite(old, 0, 0, Magick::CopyOpacityCompositeOp);
-	}
-	else if(options::verbosity >= 1) {
-		std::cout << "\tSkipping alpha premultiplication..." << std::endl;
-	}
-
-	img.flip();
-
-	size_t mipmap_count;
-	if(options::no_mipmaps) {
-		mipmap_count = 1;
-		if(options::verbosity >= 1) {
-			std::cout << "\tSkipping mipmap generation..." << std::endl;
-		}
-	}
-	else {
-		mipmap_count = 1 + size_t(floor( log(min_dim)/log(2) ));
-		if(options::verbosity >= 1) {
-			std::cout << "\tGenerating " << mipmap_count << " mipmaps..." << std::endl;
-		}
-	}
-
-	reallocateMipmaps(mipmap_count);
-
-	header.setField("mipmap_count", mipmap_count);
-
-	bool is_uncompressed;
-	int squish_flags = getSquishCompressionFlag(header, is_uncompressed);
-
+void KTech::KTEX::File::CompressMipmap(KTech::KTEX::File::Mipmap& M, const KTech::KTEX::File::CompressionFormat& fmt, Magick::Image img) const {
 	std::string magick_str = "RGBA";
 	size_t pixel_size = 4;
-	if(is_uncompressed) {
+	if(fmt.is_uncompressed) {
 		magick_str = getMagickString(header);
 		if(magick_str == "RGB") {
 			pixel_size = 3;
 		}
 	}
 
-	for(size_t i = 0; i < mipmap_count; i++) {
-		if(!options::no_mipmaps && options::verbosity >= 1) {
-			std::cout << "\t\tGenerating mipmap #" << (i + 1) << "..." << std::endl;
-		}
+	img.flip();
 
-		Mipmaps[i].width = width;
-		Mipmaps[i].height = height;
+	int width = (int)img.columns();
+	int height = (int)img.rows();
 
-		if(is_uncompressed) {
-			Mipmaps[i].pitch = pixel_size*width;
-		}
-		else {
-			Mipmaps[i].pitch = squish::GetStorageRequirements(width, 1, squish_flags);
-		}
-
-		Magick::Blob B;
-		img.write(&B, magick_str, 8);
-
-		if(is_uncompressed) {
-			Mipmaps[i].setDataSize( B.length() );
-		}
-		else {
-			Mipmaps[i].setDataSize( squish::GetStorageRequirements(width, height, squish_flags) );
-		}
-
-
-		if(is_uncompressed) {
-			memcpy(Mipmaps[i].data, B.data(), B.length());
-		}
-		else {
-			squish::CompressImage( (const squish::u8*)B.data(), width, height, Mipmaps[i].data, squish_flags );
-		}
-
-		width /= 2;
-		height /= 2;
-
-		if(i + 1 < mipmap_count) {
-			assert( width > 0 && height > 0 );
-			img.filterType( options::filter );
-			img.resize( Magick::Geometry(width, height) );
-		}
+	if(width <= 0 || height <= 0) {
+		throw(KleiUtilsError("Attempt to compress an image with a non-positive dimension."));
 	}
 
-	assert( options::no_mipmaps || width == 0 || height == 0 );
+	M.width = width;
+	M.height = height;
 
-	if(options::verbosity >= 0) {
-		std::cout << "Compressed." << std::endl;
+	if(fmt.is_uncompressed) {
+		M.pitch = pixel_size*width;
+	}
+	else {
+		M.pitch = squish::GetStorageRequirements(width, 1, fmt.squish_flags);
+	}
+
+	Magick::Blob B;
+	img.write(&B, magick_str, 8);
+
+	if(fmt.is_uncompressed) {
+		M.setDataSize( B.length() );
+	}
+	else {
+		M.setDataSize( squish::GetStorageRequirements(width, height, fmt.squish_flags) );
+	}
+
+
+	if(fmt.is_uncompressed) {
+		memcpy(M.data, B.data(), B.length());
+	}
+	else {
+		squish::CompressImage( (const squish::u8*)B.data(), width, height, M.data, fmt.squish_flags );
 	}
 }

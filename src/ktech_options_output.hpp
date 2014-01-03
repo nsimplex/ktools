@@ -134,7 +134,7 @@ inline void KTech::options::Output::usage_short(TCLAP::CmdLineInterface& c, std:
 
 	std::list<Arg*> argList = c.getArgList();
 
-	string s = "Usage: " + c.getProgramName() + " [OPTION]...";
+	string s = "Usage: " + c.getProgramName() + " [OPTION]... [--]";
 
 	for(ArgListIterator it = argList.begin(); it != argList.end(); ++it) {
 		if((*it)->isRequired() || isUnlabeled(*it)) {

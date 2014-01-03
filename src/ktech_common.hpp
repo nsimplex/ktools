@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <config.h>
 
+#include "compat.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -40,6 +41,8 @@ extern "C" {
 }
 
 #include <exception>
+#include <stdexcept>
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -47,6 +50,8 @@ extern "C" {
 #include <list>
 #include <set>
 #include <map>
+#include <iterator>
+#include <algorithm>
 
 #include <Magick++.h>
 
@@ -95,6 +100,59 @@ namespace KTech {
 		T first;
 		U second;
 	};
+
+	template<typename T>
+	class Maybe {
+		template<typename> friend class Maybe;
+
+		bool is_nothing;
+		T val;
+
+	public:
+		Maybe& operator=(const Maybe& m) {
+			is_nothing = m.is_nothing;
+			val = m.val;
+			return *this;
+		}
+
+		Maybe& operator=(T _val) {
+			is_nothing = false;
+			val = _val;
+			return *this;
+		}
+
+		Maybe() : is_nothing(true) {}
+		Maybe(T _val) { *this = _val; }
+		Maybe(const Maybe& m) { *this = m; }
+
+		template<typename U>
+		bool operator==(const Maybe<U>& m) const {
+			return is_nothing && m.is_nothing;
+		}
+
+		template<typename U>
+		bool operator!=(const Maybe<U>& m) const {
+			return !(*this == m);
+		}
+
+		bool operator==(const Maybe& m) const {
+			return (is_nothing && m.is_nothing) || (!is_nothing && !m.is_nothing && val == m.val);
+		}
+
+		T value() const {
+			if(is_nothing) {
+				throw Error("Attempt to cast Nothing to a value.");
+			}
+			return val;
+		}
+	};
+
+	extern Maybe<bool> Nothing;
+
+	template<typename T>
+	Maybe<T> Just(T val) {
+		return Maybe<T>(val);
+	}
 }
 
 #endif

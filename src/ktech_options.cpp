@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ktech.hpp"
 #include "ktech_options.hpp"
 #include "ktech_options_output.hpp"
 #include <tclap/CmdLine.h>
@@ -39,7 +40,16 @@ If output-path is not given, then it is taken as input-file stripped from its\n\
 directory part and with its extension replaced by `.png' (thus placing it in\n\
 the current directory). If output-path is a directory, this same rule applies,\n\
 but the resulting file is placed in it instead. If output-path is given and is\n\
-not a directory, the format of the output file is inferred from its extension.";
+not a directory, the format of the output file is inferred from its extension.\n\
+\n\
+If more than one input file is given (separated by commas), they are assumed\n\
+to be a precomputed mipmap chain (this use scenario is mostly relevant for\n\
+automated processing). This should only be used for TEX output.\n\
+\n\
+If output path contains the string '%02d', then for TEX input all its\n\
+mipmaps will be exported in a sequence of images by replacing '%02d' with\n\
+the number of the mipmap (counting from zero).";
+
 
 
 // Maps a boolean value for requiredness into a bracket pair.
@@ -59,6 +69,9 @@ namespace KTech {
 		bool no_premultiply = false;
 
 		bool no_mipmaps = false;
+
+		Maybe<size_t> width;
+		Maybe<size_t> height;
 	}
 }
 
@@ -277,15 +290,20 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		args.push_back(&type_opt);
 		myOutput.setArgCategory(type_opt, TO_TEX);
 
-		/*
 		SwitchArg no_premultiply_flag("", "no-premultiply", "Don't premultiply alpha.");
 		args.push_back(&no_premultiply_flag);
 		myOutput.setArgCategory(no_premultiply_flag, TO_TEX);
-		*/
 
 		SwitchArg no_mipmaps_flag("", "no-mipmaps", "Don't generate mipmaps.");
 		args.push_back(&no_mipmaps_flag);
 		myOutput.setArgCategory(no_mipmaps_flag, TO_TEX);
+
+		MyValueArg<int> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, -1, "pixels");
+		args.push_back(&width_opt);
+
+		MyValueArg<int> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, -1, "pixels");
+		args.push_back(&height_opt);
+
 
 
 		/*
@@ -309,7 +327,7 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		args.push_back(&quiet_flag);
 
 
-		ArgumentOption input_opt("input-file", "Input path.", true, "input-file");
+		ArgumentOption input_opt("input-file", "Input path.", true, "input-file[,...]");
 		cmd.add(input_opt);
 
 		ArgumentOption output_opt("output-path", "Output path.", false, "output-path");
@@ -343,6 +361,14 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		*/
 
 		options::no_mipmaps = no_mipmaps_flag.getValue();
+
+		if(width_opt.getValue() > 0) {
+			options::width = Just((size_t)width_opt.getValue());
+		}
+
+		if(height_opt.getValue() > 0) {
+			options::height = Just((size_t)height_opt.getValue());
+		}
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;

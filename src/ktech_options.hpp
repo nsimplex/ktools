@@ -20,11 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTECH_OPTIONS_HPP
 
 #include "ktech_common.hpp"
-#include "ktex/ktex.hpp"
 
 namespace KTech {
-	KTEX::File::Header parse_commandline_options(int& argc, char**& argv, std::string& input_path, std::string& output_path);
-
 	namespace options {
 		extern int verbosity;
 
@@ -37,6 +34,9 @@ namespace KTech {
 		extern bool no_premultiply;
 
 		extern bool no_mipmaps;
+
+		extern Maybe<size_t> width;
+		extern Maybe<size_t> height;
 	}
 }
 
