@@ -3,6 +3,9 @@
 
 AC_PREREQ([2.69])
 AC_INIT(ktech, 2.1)
+
+AC_CANONICAL_TARGET
+
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
@@ -14,7 +17,6 @@ AH_TOP([#ifndef KTECH_CONFIG_H
 AC_CONFIG_HEADERS([config.h])
 AH_BOTTOM([#endif])
 
-AC_CANONICAL_TARGET
 
 AC_ARG_ENABLE([cpuextensions],
 	AS_HELP_STRING([--disable-cpuextensions], [Disables use of CPU extensions.]))
