@@ -4,9 +4,10 @@
 AC_PREREQ([2.69])
 AC_INIT(ktech, 2.1)
 
+AC_CONFIG_AUX_DIR([build-aux])
+
 AC_CANONICAL_TARGET
 
-AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
 
