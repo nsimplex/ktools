@@ -8,7 +8,7 @@ See NOTICE.txt.
 
 USAGE
 -------
-	Usage: ./ktech [OPTION]... [--] <input-file[,...]> [output-path]
+	Usage: ktech [OPTION]... [--] <input-file[,...]> [output-path]
 
 	Options for TEX input:
 		-Q,  --quality  <0-100>
@@ -34,6 +34,9 @@ USAGE
 		--height  <pixels>
 			 Fixed height to be used for the output. Without a width, preserves
 			 ratio.
+		--pow2
+			 Rounds width and height up to a power of 2. Applied after the options
+			 `width' and `height', if given.
 		-v,  --verbose  (accepted multiple times)
 			 Increases output verbosity.
 		-q,  --quiet
@@ -59,7 +62,7 @@ USAGE
 	to be a precomputed mipmap chain (this use scenario is mostly relevant for
 	automated processing). This should only be used for TEX output.
 
-	If output path contains the string '%02d', then for TEX input all its
+	If output-path contains the string '%02d', then for TEX input all its
 	mipmaps will be exported in a sequence of images by replacing '%02d' with
 	the number of the mipmap (counting from zero).
 
