@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(ktech, 2.0)
+AC_INIT(ktech, 2.1)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
@@ -14,6 +14,7 @@ AH_TOP([#ifndef KTECH_CONFIG_H
 AC_CONFIG_HEADERS([config.h])
 AH_BOTTOM([#endif])
 
+AC_CANONICAL_TARGET
 
 AC_ARG_ENABLE([cpuextensions],
 	AS_HELP_STRING([--disable-cpuextensions], [Disables use of CPU extensions.]))
@@ -40,14 +41,10 @@ AC_CHECK_HEADERS([stdint.h inttypes.h sys/types.h],
 		 [ktech_has_int_header=yes; break;])
 AS_IF([test "x$ktech_has_int_header" != "xyes"],
       [AC_MSG_ERROR([Unable to find headers defining fixed-length integer types.])])
-AC_CHECK_HEADERS([sys/stat.h stat.h],
+AC_CHECK_HEADERS([sys/stat.h],
 		 [ktech_has_stat_header=yes; break;])
 AS_IF([test "x$ktech_has_stat_header" != "xyes"],
       [AC_MSG_ERROR([Unable to find a stat.h header.])])
-AC_CHECK_HEADERS([libgen.h],
-		 [ktech_has_libgen_header=yes; break;])
-AS_IF([test "x$ktech_has_libgen_header" != "xyes"],
-      [AC_MSG_ERROR([Unable to find the libgen.h header.])])
 AC_LANG_POP
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -64,6 +61,13 @@ AS_IF([! test "x$enable_cpuextensions" = "xno" && test "x$OLD_CXXFLAGS" = "x"],
 AS_IF([! test "x$enable_cpuextensions" = "xno" && test "x$ac_cv_cxx_compiler_gnu" = "xyes"], [AX_EXT])
 AM_CONDITIONAL([HAVE_SSE2_EXTENSION], [test "x$ax_cv_have_sse2_ext" = "xyes"])
 AM_CONDITIONAL([HAVE_ALTIVEC_EXTENSION], [test "x$ax_cv_have_altivec_ext" = "xyes"])
+
+case "x$target" in
+	x*mingw* ) is_mingw_cross_compiling="yes" ;;
+	* ) ;;
+esac
+
+AM_CONDITIONAL([IS_MINGW_CROSS_COMPILING], [test "x$is_mingw_cross_compiling" = "xyes"])
 
 ################
 # tclap stuff

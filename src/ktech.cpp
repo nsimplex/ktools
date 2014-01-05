@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktech.hpp"
 #include "image_operations.hpp"
 
-#include <iomanip>
 
 // For non-KTEX.
 #define DEFAULT_OUTPUT_EXTENSION "png"
@@ -33,12 +32,18 @@ using namespace std;
 KTech::Maybe<bool> KTech::Nothing;
 
 
+template<typename IntegerType>
+const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = Pow2Rounder::roundDown<IntegerType>( std::numeric_limits<IntegerType>::max() );
+
+
+
 static bool should_resize() {
-	return options::width != Nothing || options::height != Nothing;
+	return options::width != Nothing || options::height != Nothing || options::pow2;
 }
 
 static void resize_image(Magick::Image& img) {
-	size_t w, h;
+	size_t w = img.columns(), h = img.rows();
+
 	if(options::width != Nothing && options::height != Nothing) {
 		w = options::width;
 		h = options::height;
@@ -51,8 +56,10 @@ static void resize_image(Magick::Image& img) {
 		h = options::height;
 		w = (h*img.columns())/img.rows();
 	}
-	else {
-		return;
+
+	if(options::pow2) {
+		w = BitOp::Pow2Rounder::roundUp(w);
+		h = BitOp::Pow2Rounder::roundUp(h);
 	}
 
 	if(options::verbosity >= 0) {
@@ -112,7 +119,7 @@ static void generate_mipmaps(ImageContainer& imgs) {
 	size_t height = img.rows();
 
 	if(options::verbosity >= 1) {
-		const size_t mipmap_count = 1 + size_t(floor( log(std::min(width, height))/log(2) ));
+		const size_t mipmap_count = BitOp::countBinaryDigits( std::min(width, height) );
 		std::cout << "Generating " << mipmap_count << " mipmaps..." << std::endl;
 	}
 

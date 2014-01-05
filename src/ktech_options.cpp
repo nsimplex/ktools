@@ -46,7 +46,7 @@ If more than one input file is given (separated by commas), they are assumed\n\
 to be a precomputed mipmap chain (this use scenario is mostly relevant for\n\
 automated processing). This should only be used for TEX output.\n\
 \n\
-If output path contains the string '%02d', then for TEX input all its\n\
+If output-path contains the string '%02d', then for TEX input all its\n\
 mipmaps will be exported in a sequence of images by replacing '%02d' with\n\
 the number of the mipmap (counting from zero).";
 
@@ -72,6 +72,7 @@ namespace KTech {
 
 		Maybe<size_t> width;
 		Maybe<size_t> height;
+		bool pow2;
 	}
 }
 
@@ -304,6 +305,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		MyValueArg<int> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, -1, "pixels");
 		args.push_back(&height_opt);
 
+		SwitchArg pow2_opt("", "pow2", "Rounds width and height up to a power of 2. Applied after the options `width' and `height', if given.");
+		args.push_back(&pow2_opt);
+
+
 
 
 		/*
@@ -369,6 +374,8 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		if(height_opt.getValue() > 0) {
 			options::height = Just((size_t)height_opt.getValue());
 		}
+
+		options::pow2 = pow2_opt.getValue();
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;

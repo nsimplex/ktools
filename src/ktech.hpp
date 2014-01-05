@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTECH_HPP
 
 #include "ktech_common.hpp"
+#include "ktech_bit_op.hpp"
 #include "ktech_options.hpp"
 #include "ktex/ktex.hpp"
 
