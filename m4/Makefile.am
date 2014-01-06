@@ -1,1 +1,0 @@
-EXTRA_DIST = ac_cxx_have_long_long.m4 ac_cxx_have_sstream.m4 ac_cxx_have_strstream.m4 ac_cxx_namespaces.m4 ac_cxx_warn_effective_cxx.m4 ax_append_compile_flags.m4 ax_append_flag.m4 ax_cflags_warn_all.m4 ax_check_compile_flag.m4 ax_ext.m4 ax_gcc_x86_avx_xgetbv.m4 ax_gcc_x86_cpuid.m4

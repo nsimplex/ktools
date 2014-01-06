@@ -1,3 +1,0 @@
-SUBDIRS = m4 lib src
-
-EXTRA_DIST = README.md NOTICE.txt LICENSE.txt

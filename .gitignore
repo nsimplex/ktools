@@ -1,4 +1,8 @@
+build/**
+old_autotools_stuff/**
+
 *.o
 *.so
 *.a
 *.dll
+*.exe
