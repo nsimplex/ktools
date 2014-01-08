@@ -219,7 +219,7 @@ namespace Compat {
 
 			const size_t last_sep = find_last_of(DIRECTORY_SEPARATOR);
 
-			if(last_sep == 0 and length() == 1) {
+			if(last_sep == 0 && length() == 1) {
 				// Root directory (so Unix).
 				dir = "/";
 				base = "/";

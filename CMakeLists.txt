@@ -5,6 +5,8 @@ set(PACKAGE_VERSION_MAJOR 1)
 set(PACKAGE_VERSION_MINOR 0)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
 
+OPTION(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/out_of_source_build.cmake)
 ENSURE_OUT_OF_SOURCE_BUILD( "${PROJECT_SOURCE_DIR}/build" )
 
@@ -30,7 +32,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/OptimizeForArchitecture.cma
 
 
 set(CMAKE_BUILD_TYPE Release)
-OptimizeForArchitecture()
+if(NOT DISABLE_CPU_EXTENSIONS)
+	OptimizeForArchitecture()
+endif()
 
 
 add_subdirectory(lib)
@@ -77,17 +81,26 @@ CHECK_INCLUDE_FILES (sys/types.h HAVE_SYS_TYPES_H)
 CHECK_INCLUDE_FILES (strstream HAVE_STRSTREAM)
 CHECK_INCLUDE_FILES (strstream.h HAVE_STRSTREAM_H)
 #
-if(HAVE_STRSTREAM)
-	set(CMAKE_EXTRA_INCLUDE_FILES "strstream")
-elseif(HAVE_STRSTREAM_H)
-	set(CMAKE_EXTRA_INCLUDE_FILES "strstream.h")
-endif()
-CHECK_TYPE_SIZE("class std::ostrstream" CLASS_STRSTREAM)
-set(CMAKE_EXTRA_INCLUDE_FILES)
+CHECK_INCLUDE_FILES (sstream HAVE_SSTREAM)
 #
-set(CMAKE_EXTRA_INCLUDE_FILES "sstream")
-CHECK_TYPE_SIZE("class std::stringstream" SSTREAM)
-set(CMAKE_EXTRA_INCLUDE_FILES)
+if(HAVE_STRSTREAM OR HAVE_STRSTREAM_H)
+	set(HAVE_CLASS_STRSTREAM TRUE)
+endif()
+if(HAVE_SSTREAM)
+	set(HAVE_CLASS_STRINGSTREAM TRUE)
+endif()
+#
+#if(HAVE_STRSTREAM)
+#	set(CMAKE_EXTRA_INCLUDE_FILES "strstream")
+#elseif(HAVE_STRSTREAM_H)
+#	set(CMAKE_EXTRA_INCLUDE_FILES "strstream.h")
+#endif()
+#CHECK_TYPE_SIZE("std::ostrstream" CLASS_STRSTREAM LANGUAGE CXX)
+#set(CMAKE_EXTRA_INCLUDE_FILES)
+#
+#set(CMAKE_EXTRA_INCLUDE_FILES "sstream")
+#CHECK_TYPE_SIZE("std::stringstream" SSTREAM LANGUAGE CXX)
+#set(CMAKE_EXTRA_INCLUDE_FILES)
 #
 CHECK_TYPE_SIZE("long long" LONG_LONG)
 #
@@ -101,8 +114,24 @@ add_subdirectory(src)
 # add_executable(<name> [WIN32] [MACOSX_BUNDLE] ...
 include_directories( src lib ${INCLUDE_DIRS} )
 link_directories( ${LINK_DIRS} )
-add_executable(ktech ${ktech_SOURCES} ${ktech_HEADERS})
+if(NOT WIN32)
+	add_executable(ktech ${ktech_SOURCES} ${ktech_HEADERS})
+else()
+	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
+endif()
 target_link_libraries( ktech ${ktech_LIBS} )
+
+
+if(WIN32)
+   set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+   set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
+   set_target_properties(ktech PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+   set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
+   set_target_properties(ktech PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+   set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_RELEASE "_CONSOLE")
+   set_target_properties(ktech PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
+   set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
+endif(WIN32)
 
 
 INSTALL(TARGETS ktech RUNTIME DESTINATION bin)

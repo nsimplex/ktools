@@ -37,18 +37,38 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
-#cmakedefine size_t
-
-/* Define to `int' if <sys/types.h> does not define. */
-#cmakedefine ssize_t
-
 /* Define to the type of an unsigned integer type of width exactly 16 bits if
    such a type exists and the standard includes do not define it. */
-#cmakedefine uint16_t
+#cmakedefine uint16_t @uint16_t@
 
 /* Define to the type of an unsigned integer type of width exactly 32 bits if
    such a type exists and the standard includes do not define it. */
-#cmakedefine uint32_t
+#cmakedefine uint32_t @uint32_t@
+
+/* Define to the type of an unsigned integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
+#cmakedefine uint64_t @uint64_t@
+
+/* Define to the type of an signed integer type of width exactly 16 bits if
+   such a type exists and the standard includes do not define it. */
+#cmakedefine int16_t @int16_t@
+
+/* Define to the type of an signed integer type of width exactly 32 bits if
+   such a type exists and the standard includes do not define it. */
+#cmakedefine int32_t @int32_t@
+
+/* Define to the type of an signed integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
+#cmakedefine int64_t @int64_t@
+
+#cmakedefine size_t @size_t@
+
+#cmakedefine ssize_t @ssize_t@
+
+#if defined(ssize_t)
+	typedef ssize_t ssize_t_WORKAROUND;
+#	undef ssize_t
+	typedef ssize_t_WORKAROUND ssize_t;
+#endif
 
 #endif

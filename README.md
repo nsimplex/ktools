@@ -66,12 +66,18 @@ USAGE
 	mipmaps will be exported in a sequence of images by replacing '%02d' with
 	the number of the mipmap (counting from zero).
 
-INSTALLATION
+INSTALLATION FROM SOURCE
 --------------
-This assumes a UNIX environment with ImageMagick installed, and that a packaged release is being installed. To install from a clone of the repository, run `autoreconf -i` beforehand (requires the GNU Autotools).
+First, install [CMake](http://www.cmake.org), [ImageMagick](http://www.imagemagick.org) and a native building solution (such as Visual Studio for Windows, XCode for Mac and gcc/GNU Make for Linux; in the Linux case, you probably have it already).
 
-Enter the project's base directory and type
-	./configure && make
-If compilation runs without errors, the executable ktech will be placed in your current directory. Move/copy it to wherever you want it. As an optional final step,
+In a terminal, enter the folder in which to build the project. The remaining assumes this folder is the build/ subdirectory of ktech's main directory. Type
+	cmake ..
+For a portable build, compatible across many CPU architectures, use the following command instead
+	cmake .. -DDISABLE_CPU_EXTENSIONS=TRUE
+The native build files will be generated in the current directory. Under Unix, building is achieved by entering
+	make
+optionally followed by
 	sudo make install
-will perform a system-wide installation of ktech.
+for a system wide installation.
+
+CMake's GUI may be used instead. Refer to its documentation for more information. Note, however, that in this case, in order to set DISABLE_CPU_EXTENSIONS the configuration must be generated once, so that the option will be available, and after tweaking it the configuration must be regenerated.

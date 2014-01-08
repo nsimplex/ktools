@@ -90,7 +90,7 @@ std::string normalize_string(const std::string& s) {
 	std::string ret;
 
 	for(i = 0; i < n && isalnum(s[i]); ++i) {
-		ret.push_back( tolower(s[i]) );
+		ret.push_back( char(tolower(s[i])) );
 	}
 
 	for(; i < n && !isalnum(s[i]); ++i);
