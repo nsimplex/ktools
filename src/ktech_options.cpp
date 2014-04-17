@@ -73,6 +73,8 @@ namespace KTech {
 		Maybe<size_t> width;
 		Maybe<size_t> height;
 		bool pow2;
+
+		bool extend;
 	}
 }
 
@@ -308,6 +310,8 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		SwitchArg pow2_opt("", "pow2", "Rounds width and height up to a power of 2. Applied after the options `width' and `height', if given.");
 		args.push_back(&pow2_opt);
 
+		SwitchArg extend_opt("", "extend", "Extends the boundaries of the image instead of resizing. Only relevant if either of the options `width', `height' or `pow2' are given. Its primary use is generating save and selection screen portraits.");
+		args.push_back(&extend_opt);
 
 
 
@@ -376,6 +380,8 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		}
 
 		options::pow2 = pow2_opt.getValue();
+
+		options::extend = extend_opt.getValue();
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;

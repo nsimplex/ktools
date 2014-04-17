@@ -42,32 +42,58 @@ static bool should_resize() {
 }
 
 static void resize_image(Magick::Image& img) {
-	size_t w = img.columns(), h = img.rows();
+	bool did_something = false;
+
+	Magick::Geometry size = img.size();
+	size_t w0 = size.width(), h0 = size.height();
+
+	size.aspect(true);
 
 	if(options::width != Nothing && options::height != Nothing) {
-		w = options::width;
-		h = options::height;
+		size.width(options::width);
+		size.height(options::height);
+		did_something = true;
 	}
 	else if(options::width != Nothing) {
-		w = options::width;
-		h = (w*img.rows())/img.columns();
+		size.width(options::width);
+		size.height((h0*size.width())/w0);
+		did_something = true;
 	}
 	else if(options::height != Nothing) {
-		h = options::height;
-		w = (h*img.columns())/img.rows();
+		size.height(options::height);
+		size.width((w0*size.height())/h0);
+		did_something = true;
 	}
 
 	if(options::pow2) {
-		w = BitOp::Pow2Rounder::roundUp(w);
-		h = BitOp::Pow2Rounder::roundUp(h);
+		size.width(BitOp::Pow2Rounder::roundUp(size.width()));
+		size.height(BitOp::Pow2Rounder::roundUp(size.height()));
+		did_something = true;
+	}
+
+	if(!did_something) {
+		return;
+	}
+
+	std::string operation_verb;
+	if(options::extend) {
+		img.backgroundColor("transparent");
+		img.extent( size );
+		if(options::verbosity >= 0) {
+			operation_verb = "Extended";
+		}
+	}
+	else {
+		img.filterType( options::filter );
+		img.resize( size );
+		if(options::verbosity >= 0) {
+			operation_verb = "Resized";
+		}
 	}
 
 	if(options::verbosity >= 0) {
-		std::cout << "Resizing image to " << w << "x" << h << std::endl;
+		std::cout << operation_verb << " image to " << img.columns() << "x" << img.rows() << std::endl;
 	}
-
-	img.filterType( options::filter );
-	img.resize( Magick::Geometry(w, h) );
 }
 
 /*

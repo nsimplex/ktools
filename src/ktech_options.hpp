@@ -38,6 +38,8 @@ namespace KTech {
 		extern Maybe<size_t> width;
 		extern Maybe<size_t> height;
 		extern bool pow2;
+
+		extern bool extend;
 	}
 }
 
