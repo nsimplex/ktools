@@ -174,6 +174,7 @@ public:
 		push_opt("blackman", BlackmanFilter);
 		push_opt("hann", HanningFilter);
 		push_opt("hamming", HammingFilter);
+		push_opt("catrom", CatromFilter);
 		push_opt("cubic", CubicFilter);
 		//push_opt("quadratic", QuadraticFilter);
 		push_opt("box", BoxFilter);
