@@ -155,6 +155,7 @@ static void generate_mipmaps(ImageContainer& imgs) {
 	while(width > 0 && height > 0) {
 		img.filterType( options::filter );
 		img.resize( Magick::Geometry(width, height) );
+		//img.despeckle();
 		imgs.push_back( img );
 
 		width /= 2;
@@ -165,6 +166,8 @@ static void generate_mipmaps(ImageContainer& imgs) {
 template<typename PathContainer>
 static void convert_to_KTEX(const PathContainer& input_paths, const string& output_path, const KTEX::File::Header& h) {
 	typedef typename PathContainer::const_iterator pc_iter;
+	typedef std::vector<Magick::Image> image_container_t;
+	typedef image_container_t::iterator image_iterator_t;
 
 	if(input_paths.size() > 1 && should_resize()) {
 		throw Error("Attempt to resize a mipchain.");
@@ -177,7 +180,7 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 		}
 		cout << "..." << endl;
 	}
-	std::vector<Magick::Image> imgs;
+	image_container_t imgs;
 	if(input_paths.size() > 1) {
 		imgs.reserve( input_paths.size() );
 	}
@@ -187,7 +190,17 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 		cout << "Finished loading." << endl;
 	}
 
-	resize_image( imgs.front() );
+	if(should_resize()) {
+		resize_image( imgs.front() );
+	}
+
+	generate_mipmaps( imgs );
+
+	{
+		image_iterator_t first_secondary_mipmap = imgs.begin();
+		std::advance(first_secondary_mipmap, 1);
+		std::for_each( first_secondary_mipmap, imgs.end(), ImOp::cleanNoise() );
+	}
 
 	if(!options::no_premultiply) {
 		if(options::verbosity >= 1) {
@@ -198,8 +211,6 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	else if(options::verbosity >= 1) {
 		std::cout << "Skipping alpha premultiplication..." << std::endl;
 	}
-
-	generate_mipmaps( imgs );
 
 	KTech::KTEX::File tex;
 	tex.header = h;
@@ -236,6 +247,16 @@ static void convert_from_KTEX(const string& input_path, const string& output_pat
 		}
 		else {
 			imgs.push_back( tex.Decompress() );
+		}
+
+		if(!options::no_premultiply) {
+			if(options::verbosity >= 1) {
+				std::cout << "Demultiplying alpha..." << std::endl;
+			}
+			std::for_each( imgs.begin(), imgs.end(), ImOp::demultiplyAlpha() );
+		}
+		else if(options::verbosity >= 1) {
+			std::cout << "Skipping alpha demultiplication..." << std::endl;
 		}
 
 		resize_image( imgs.front() );

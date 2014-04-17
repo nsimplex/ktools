@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace KTech { namespace ImOp {
 	typedef std::unary_function<Magick::Image&, void> unary_operation_t;
+	typedef std::unary_function<Magick::PixelPacket*, void> pixel_operation_t;
 
 	class read : public unary_operation_t {
 		const std::string& path;
@@ -61,13 +62,100 @@ namespace KTech { namespace ImOp {
 		return SequenceWriter<Container>(c);
 	}
 
-	class premultiplyAlpha : public unary_operation_t {
+	inline Magick::Quantum multiplyQuantum(Magick::Quantum q, double factor) {
+		using namespace Magick;
+
+		const double result = factor*q;
+		if(result >= MaxRGB) {
+			return MaxRGB;
+		}
+		else {
+			return Quantum(result);
+		}
+	}
+
+	class premultiplyPixelAlpha : public pixel_operation_t {
+	public:
+		void operator()(Magick::PixelPacket *p) const {
+			using namespace Magick;
+
+			double a = 1 - double(p->opacity)/MaxRGB;
+			if(a <= 0) a = 0;
+			else if(a > 1) a = 1;
+
+			p->red = multiplyQuantum(p->red, a);
+			p->green = multiplyQuantum(p->green, a);
+			p->blue = multiplyQuantum(p->blue, a);
+		}
+	};
+
+	class demultiplyPixelAlpha : public pixel_operation_t {
+	public:
+		void operator()(Magick::PixelPacket *p) const {
+			using namespace Magick;
+
+			const double a = 1 - double(p->opacity)/MaxRGB;
+			if(a <= 0 || a >= 1) return;
+
+			const double inva = 1/a;
+
+			p->red = multiplyQuantum(p->red, inva);
+			p->green = multiplyQuantum(p->green, inva);
+			p->blue = multiplyQuantum(p->blue, inva);
+		}
+	};
+
+	template<typename PixelOperation>
+	class pixelMap : public unary_operation_t {
+		PixelOperation op;
 	public:
 		void operator()(Magick::Image& img) const {
-			Magick::Image old = img;
-			img = Magick::Image(old.size(), "black");
-			img.composite(old, 0, 0, Magick::OverCompositeOp);
-			img.composite(old, 0, 0, Magick::CopyOpacityCompositeOp);
+			using namespace Magick;
+			img.type(TrueColorMatteType);
+			img.modifyImage();
+			
+			Pixels view(img);
+
+			const size_t w = img.columns(), h = img.rows();
+			PixelPacket *p = view.get(0, 0, w, h);
+
+			for(size_t i = 0; i < h; i++) {
+				for(size_t j = 0; j < w; j++) {
+					op(p++);
+				}
+			}
+
+			view.sync();
+		}
+	};
+
+	/*
+	void highlevel_premultiply(Magick::Image& img) const {
+		Magick::Image old = img;
+		img = Magick::Image(old.size(), "black");
+		img.composite(old, 0, 0, Magick::OverCompositeOp);
+		img.composite(old, 0, 0, Magick::CopyOpacityCompositeOp);
+	}
+	*/
+
+	class premultiplyAlpha : public pixelMap<premultiplyPixelAlpha> {};
+
+	class demultiplyAlpha : public pixelMap<demultiplyPixelAlpha> {};
+
+	class cleanNoise : public unary_operation_t {
+	public:
+		void operator()(Magick::Image& img) const {
+			using namespace Magick;
+
+			img.despeckle();
+
+			Image alpha = img;
+			alpha.channel(MatteChannel);
+			alpha.negate();
+			alpha.medianFilter(0.75);
+
+			img.matte(false);
+			img.composite(alpha, 0, 0, CopyOpacityCompositeOp);
 		}
 	};
 

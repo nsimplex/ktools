@@ -64,7 +64,7 @@ namespace KTech {
 
 		int image_quality = 100;
 
-		Magick::FilterTypes filter = Magick::CatromFilter;
+		Magick::FilterTypes filter = Magick::LanczosFilter;
 
 		bool no_premultiply = false;
 
@@ -169,11 +169,12 @@ public:
 	FilterTypeTranslator() {
 		using namespace Magick;
 
-		push_opt("bicubic", CatromFilter);
 		push_opt("lanczos", LanczosFilter);
-		push_opt("blackman", BlackmanFilter);
-		push_opt("hann", HanningFilter);
-		push_opt("hamming", HammingFilter);
+		push_opt("mitchell", MitchellFilter);
+		push_opt("bicubic", CatromFilter);
+		//push_opt("blackman", BlackmanFilter);
+		//push_opt("hann", HanningFilter);
+		//push_opt("hamming", HammingFilter);
 		push_opt("catrom", CatromFilter);
 		push_opt("cubic", CubicFilter);
 		//push_opt("quadratic", QuadraticFilter);

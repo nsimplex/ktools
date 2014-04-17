@@ -99,7 +99,7 @@ void KTech::KTEX::File::Header::print(std::ostream& out, size_t indentation, con
 			out << prefix << indent_string << "value: ";
 		}
 		else {
-			out << " = ";
+			out << ": ";
 		}
 
 		std::string fs = getFieldString(it->first);
@@ -159,8 +159,7 @@ void KTech::KTEX::File::Mipmap::print(std::ostream& out, size_t indentation, con
 		prefix += indent_string;
 	}
 
-	out << prefix << "width: " << width << endl;
-	out << prefix << "height: " << height << endl;
+	out << prefix << "size: " << width << "x" << height << endl;
 	out << prefix << "pitch: " << pitch << endl;
 	out << prefix << "data size: " << datasz << endl;
 }
@@ -209,8 +208,7 @@ void KTech::KTEX::File::print(std::ostream& out, size_t indentation, const std::
 	if(mipmap_count > 0) {
 		std::string local_prefix = prefix + indent_string;
 		const Mipmap& M = Mipmaps[0];
-		out << local_prefix << "width: " << M.width << endl;
-		out << local_prefix << "height: " << M.height << endl;
+		out << local_prefix << "size: " << M.width << "x" << M.height << endl;
 	}
 
 	out << prefix << "Header:" << endl;
