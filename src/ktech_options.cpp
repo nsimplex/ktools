@@ -64,7 +64,7 @@ namespace KTech {
 
 		int image_quality = 100;
 
-		Magick::FilterTypes filter = Magick::LanczosFilter;
+		Magick::FilterTypes filter = Magick::CubicFilter;
 
 		bool no_premultiply = false;
 
@@ -128,6 +128,16 @@ public:
 		return it->second;
 	}
 
+	std::string inverseTranslate(const T val) const {
+		typename map<string, T>::const_iterator it;
+		for(it = opt_map.begin(); it != opt_map.end(); ++it) {
+			if(it->second == val) {
+				return it->first;
+			}
+		}
+		return "";
+	}
+
 	T translate(ValueArg<string>& a) const {
 		return translate( a.getValue() );
 	}
@@ -168,7 +178,7 @@ public:
 		//push_opt("biquadratic", QuadraticFilter);
 		push_opt("box", BoxFilter);
 
-		default_opt = "lanczos";
+		default_opt = inverseTranslate(options::filter);
 	}
 };
 
