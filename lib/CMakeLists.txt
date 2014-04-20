@@ -5,5 +5,3 @@ elseif(NOT DISABLE_CPU_EXTENSIONS)
 endif()
 
 add_subdirectory( squish )
-
-set( ktech_LIBS "${ktech_LIBS};squish" PARENT_SCOPE )

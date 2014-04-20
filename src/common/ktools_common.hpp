@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_BASIC_HPP
-#define KTECH_BASIC_HPP
+#ifndef KTOOLS_BASIC_HPP
+#define KTOOLS_BASIC_HPP
 
 
 #include <config.h>
@@ -52,6 +52,7 @@ extern "C" {
 #include <map>
 #include <iterator>
 #include <algorithm>
+#include <functional>
 
 #include <Magick++.h>
 
@@ -76,10 +77,10 @@ namespace KTech {
 		std::string cppwhat;
 	};
 
-	class KleiUtilsError : public Error {
+	class KToolsError : public Error {
 	public:
-		KleiUtilsError(const std::string& kuwhat) : Error("KTech error: " + kuwhat) {}
-		virtual ~KleiUtilsError() throw() {}
+		KToolsError(const std::string& kuwhat) : Error("Error: " + kuwhat) {}
+		virtual ~KToolsError() throw() {}
 	};
 
 
@@ -153,7 +154,7 @@ namespace KTech {
 	};
 
 	template<typename T>
-	Maybe<T> Just(T val) {
+	inline Maybe<T> Just(T val) {
 		return Maybe<T>(val);
 	}
 

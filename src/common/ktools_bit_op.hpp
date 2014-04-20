@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_BIT_OP_HPP
-#define KTECH_BIT_OP_HPP
+#ifndef KTOOLS_BIT_OP_HPP
+#define KTOOLS_BIT_OP_HPP
 
-#include "ktech_common.hpp"
+#include "ktools_common.hpp"
 #include <limits>
 
 

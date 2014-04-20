@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 2.8)
-Project(ktech CXX)
+cmake_minimum_required (VERSION 2.8.8)
+Project(ktools CXX)
 
 set(PACKAGE_VERSION_MAJOR 3)
 set(PACKAGE_VERSION_MINOR 0)
@@ -13,9 +13,9 @@ ENSURE_OUT_OF_SOURCE_BUILD( "${PROJECT_SOURCE_DIR}/build" )
 ENABLE_LANGUAGE(C)
 
 
-set( INCLUDE_DIRS "" )
+set( COMMON_INCLUDE_DIRS "" )
 set( LINK_DIRS "" )
-set( ktech_LIBS "" )
+set( COMMON_LIBS "squish" )
 
 
 include(CheckIncludeFile)
@@ -61,14 +61,17 @@ endif()
 foreach(f ${Magick++_PKGCONF_LDFLAGS})
 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${f}" )
 endforeach()
-list( APPEND INCLUDE_DIRS "${ImageMagick_INCLUDE_DIRS}" )
-list( APPEND ktech_LIBS "${ImageMagick_LIBRARIES}" )
+list( APPEND COMMON_INCLUDE_DIRS "${ImageMagick_INCLUDE_DIRS}" )
+list( APPEND COMMON_LIBS "${ImageMagick_LIBRARIES}" )
 
 
 CHECK_LIBRARY_EXISTS(m floor "" HAVE_MATH_LIB) 
 if(HAVE_MATH_LIB)
-	set( ktech_LIBS ${ktech_LIBS} "m" )
+	list( APPEND COMMON_LIBS "m" )
 endif(HAVE_MATH_LIB)
+
+set( ktech_LIBS "${COMMON_LIBS}" )
+set( kraze_LIBS "${COMMON_LIBS}" )
 
 
 CHECK_INCLUDE_FILES (cstddef HAVE_CSTDDEF)
@@ -105,22 +108,29 @@ endif()
 CHECK_TYPE_SIZE("long long" LONG_LONG)
 #
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
+list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
 
 
 add_subdirectory(src)
 
 
-# add_executable(<name> [WIN32] [MACOSX_BUNDLE] ...
-include_directories( src lib ${INCLUDE_DIRS} )
+list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/common ${PROJECT_SOURCE_DIR}/lib )
+set( KTECH_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/ktech )
+set( KRAZE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/kraze )
+
 link_directories( ${LINK_DIRS} )
+
+# add_executable(<name> [WIN32] [MACOSX_BUNDLE] ...
 if(NOT WIN32)
 	add_executable(ktech ${ktech_SOURCES} ${ktech_HEADERS})
 else()
-	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
+#	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
 endif()
+message( "LIBS: ${ktech_LIBS}" )
 target_link_libraries( ktech ${ktech_LIBS} )
 
+set_property( TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}" )
+#set_property( TARGET kraze PROPERTY INCLUDE_DIRECTORIES "${KRAZE_INCLUDE_DIRS}" )
 
 if(WIN32)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
@@ -131,10 +141,19 @@ if(WIN32)
    set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_RELEASE "_CONSOLE")
    set_target_properties(ktech PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
    set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
+
+   set_target_properties(kraze PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
+   set_target_properties(kraze PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
+   set_target_properties(kraze PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_RELEASE "_CONSOLE")
+   set_target_properties(kraze PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
+   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
 endif(WIN32)
 
 
-INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
+#INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
 
 
 

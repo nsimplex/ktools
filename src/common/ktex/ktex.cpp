@@ -49,7 +49,7 @@ void KTech::KTEX::File::dumpTo(const std::string& path) {
 
 	std::ofstream out(path.c_str(), std::ofstream::out | std::ofstream::binary);
 	if(!out)
-		throw(KleiUtilsError("failed to open `" + path + "' for writing."));
+		throw(KToolsError("failed to open `" + path + "' for writing."));
 
 	out.imbue(std::locale::classic());
 
@@ -67,7 +67,7 @@ void KTech::KTEX::File::loadFrom(const std::string& path) {
 	
 	std::ifstream in(path.c_str(), std::ifstream::in | std::ifstream::binary);
 	if(!in)
-		throw(KleiUtilsError("failed to open `" + path + "' for reading."));
+		throw(KToolsError("failed to open `" + path + "' for reading."));
 
 	in.imbue(std::locale::classic());
 
@@ -125,7 +125,7 @@ std::istream& KTech::KTEX::File::Header::load(std::istream& in) {
 	uint32_t magic;
 	raw_read_integer(in, magic);
 	if(!in || magic != MAGIC_NUMBER) {
-		throw(KleiUtilsError("Attempt to read a non-KTEX file as KTEX."));
+		throw(KToolsError("Attempt to read a non-KTEX file as KTEX."));
 	}
 
 	raw_read_integer(in, data);
@@ -233,7 +233,7 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 		header.print(std::cout, 1);
 	}
 	if(!header.dump(out)) {
-		throw(KleiUtilsError("Failed to write KTEX header."));
+		throw(KToolsError("Failed to write KTEX header."));
 	}
 
 	// If it's at least 2, the mipmap count was already printed as part of
@@ -251,7 +251,7 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 		}
 
 		if(!Mipmaps[i].dumpPre(out)) {
-			throw(KleiUtilsError("Failed to write KTEX mipmap."));
+			throw(KToolsError("Failed to write KTEX mipmap."));
 		}
 	}
 
@@ -261,7 +261,7 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 		}
 
 		if(!Mipmaps[i].dumpPost(out)) {
-			throw(KleiUtilsError("Failed to write KTEX mipmap."));
+			throw(KToolsError("Failed to write KTEX mipmap."));
 		}
 	}
 
@@ -273,7 +273,7 @@ std::istream& KTech::KTEX::File::load(std::istream& in) {
 		std::cout << "Loading KTEX header..." << std::endl;
 	}
 	if(!header.load(in)) {
-		throw(KleiUtilsError("Failed to read KTEX header."));
+		throw(KToolsError("Failed to read KTEX header."));
 	}
 	if(options::verbosity >= 2) {
 		header.print(std::cout, 1);
@@ -293,7 +293,7 @@ std::istream& KTech::KTEX::File::load(std::istream& in) {
 		}
 
 		if(!Mipmaps[i].loadPre(in)) {
-			throw(KleiUtilsError("Failed to read KTEX mipmap."));
+			throw(KToolsError("Failed to read KTEX mipmap."));
 		}
 
 		if(options::verbosity >= 2) {
@@ -309,7 +309,7 @@ std::istream& KTech::KTEX::File::load(std::istream& in) {
 		}
 
 		if(!Mipmaps[i].loadPost(in)) {
-			throw(KleiUtilsError("Failed to read KTEX mipmap."));
+			throw(KToolsError("Failed to read KTEX mipmap."));
 		}
 	}
 
@@ -422,7 +422,7 @@ void KTech::KTEX::File::CompressMipmap(KTech::KTEX::File::Mipmap& M, const KTech
 	int height = (int)img.rows();
 
 	if(width <= 0 || height <= 0) {
-		throw(KleiUtilsError("Attempt to compress an image with a non-positive dimension."));
+		throw(KToolsError("Attempt to compress an image with a non-positive dimension."));
 	}
 
 	M.width = width;

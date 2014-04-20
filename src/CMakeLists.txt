@@ -1,12 +1,14 @@
 set( local_ktech_SOURCES 
-	ktech.cpp ktech_options.cpp
+	ktech/ktech.cpp ktech/ktech_options.cpp
+	common/ktex/ktex.cpp common/ktex/specs.cpp
 )
 
 set( local_ktech_HEADERS
-	ktech.hpp ktech_common.hpp ktech_bit_op.hpp image_operations.hpp ktech_options.hpp ktech_options_output.hpp
-	ktex/ktex.cpp ktex/specs.cpp
-	ktex/ktex.hpp ktex/specs.hpp ktex/headerfield_specs.hpp ktex/io.hpp
-	compat.hpp compat/common.hpp compat/posix.hpp compat/fs.hpp
+	ktech/ktech.hpp ktech/ktech_common.hpp 
+	ktech/ktech_options.hpp ktech/ktech_options_output.hpp
+	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
+	common/ktools_bit_op.hpp common/image_operations.hpp 
+	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp common/ktex/io.hpp
 )
 
 
