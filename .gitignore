@@ -1,5 +1,9 @@
 build/**
-old_autotools_stuff/**
+deps/**
+local/**
+**/Makefile
+*.txt
+*.cmake
 
 *.o
 *.so

@@ -12,6 +12,11 @@
 #include <algorithm>
 #include <iterator>
 #include <cassert>
+#include <cstdlib>
+
+#ifndef PATH_MAX
+#	define PATH_MAX 65536
+#endif
 
 namespace Compat {
 #ifdef IS_UNIX
@@ -151,6 +156,13 @@ namespace Compat {
 		Path& operator=(const Path& p) {
 			std::string::assign(p);
 			return *this;
+		}
+
+		void makeAbsolute() {
+			char resolved_path[PATH_MAX];
+			if( realpath(c_str(), resolved_path) != NULL ) {
+				assignPath(resolved_path);
+			}
 		}
 
 		Path(const std::string& str) : std::string() {

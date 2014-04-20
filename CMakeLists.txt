@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 Project(ktech CXX)
 
-set(PACKAGE_VERSION_MAJOR 1)
+set(PACKAGE_VERSION_MAJOR 3)
 set(PACKAGE_VERSION_MINOR 0)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
 
@@ -135,3 +135,40 @@ endif(WIN32)
 
 
 INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
+
+
+
+#
+# Packing stuff
+#
+set(CPACK_PACKAGE_VERSION_MAJOR "${PACKAGE_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PACKAGE_VERSION_MINOR}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Don't Starve modding tools for *nix.")
+set(CPACK_PACKAGE_VENDOR "simplex")
+set(CPACK_GENERATOR "TGZ")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${PACKAGE_VERSION}")
+set(CPACK_SOURCE_GENERATOR "TGZ")
+# The following components are regex's to match anywhere (unless anchored)
+# in absolute path + filename to find files or directories to be excluded
+# from source tarball.
+set(CPACK_SOURCE_IGNORE_FILES
+"~$"
+"/[.].+$"
+"/local/"
+"/deps/"
+"/build/"
+"/cmake_install.cmake$"
+".*/cmake_install.cmake$"
+"/CMakeFiles/"
+"/Makefile$"
+"${CMAKE_BINARY_DIR}/.*"
+)
+include(CPack)
+
+add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
+add_custom_target(bindist COMMAND ${CMAKE_MAKE_PROGRAM} package)
+add_custom_target(distclean
+	COMMAND rm -rf CMakeCache.txt CPackConfig.cmake CPackSourceConfig.cmake
+	COMMAND -find . '\(' -name CMakeFiles -o -name cmake_install.cmake -o -name Makefile '\)' -exec rm -rf {} '\;'
+	COMMAND rm -rf build/*
+)
