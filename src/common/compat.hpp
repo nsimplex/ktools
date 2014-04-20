@@ -4,8 +4,8 @@
  * repository. They are public domain.
  */
 
-#ifndef KTECH_COMPAT_HPP
-#define KTECH_COMPAT_HPP
+#ifndef KTOOLS_COMPAT_HPP
+#define KTOOLS_COMPAT_HPP
 
 #include "compat/common.hpp"
 #include "compat/posix.hpp"

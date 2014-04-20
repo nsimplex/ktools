@@ -58,7 +58,7 @@ extern "C" {
 
 #include <squish/squish.h>
 
-namespace KTech {
+namespace KTools {
 	enum ExitStatus {
 		MagickErrorCode = 1,
 		KTEXErrorCode = 2,

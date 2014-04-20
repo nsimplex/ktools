@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits>
 
 
-namespace KTech { namespace BitOp {
+namespace KTools { namespace BitOp {
 	class Pow2Rounder {
 		template<typename IntegerType>
 		class Metadata {

@@ -1,5 +1,5 @@
-#ifndef KTECH_COMPAT_POSIX_HPP
-#define KTECH_COMPAT_POSIX_HPP
+#ifndef KTOOLS_COMPAT_POSIX_HPP
+#define KTOOLS_COMPAT_POSIX_HPP
 
 /*
  * Windows includes many functions from POSIX, however it prepends an underscore.

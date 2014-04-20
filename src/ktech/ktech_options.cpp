@@ -261,6 +261,7 @@ static const std::string TO_TEX = "Options for TEX output";
 
 KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, string& input_path, string& output_path) {
 	KTEX::File::Header configured_header;
+	configured_header.io.setNativeSource();
 
 	try {
 		typedef HeaderStrOptTranslator str_trans;

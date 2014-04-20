@@ -16,13 +16,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_BASIC_HPP
-#define KTECH_BASIC_HPP
+#ifndef KRANE_BASIC_HPP
+#define KRANE_BASIC_HPP
 
 #include "ktools_common.hpp"
 
-namespace KTech {
+namespace Krane {
 	using namespace KTools;
+
+	typedef uint32_t hash_t;
+	typedef int32_t signed_hash_t;
+
+	inline hash_t strhash(const std::string& str) {
+		const size_t len = str.length();
+		signed_hash_t h = 0;
+		for(size_t i = 0; i < len; i++) {
+			signed_hash_t c = tolower(str[i]);
+			h = (c + (h << 6) + (h << 16) - h); // & 0xffffffff;
+		}
+		return *reinterpret_cast<hash_t*>(&h);
+	}
 }
 
 #endif

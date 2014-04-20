@@ -17,18 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include "ktex/ktex.hpp"
-#include "ktex/io.hpp"
-#include "ktech_options.hpp"
+#include "io_utils.hpp"
 
 
-KTech::Endianess KTech::KTEX::source_endianness = KTech::ktech_UNKNOWN_ENDIAN;
-KTech::Endianess KTech::KTEX::target_endianness = KTech::ktech_LITTLE_ENDIAN;
+using namespace KTools;
+using namespace KTools::KTEX;
 
-
-using namespace KTech;
-using namespace KTech::KTEX;
-
-bool KTech::KTEX::File::isKTEXFile(const std::string& path) {
+bool KTools::KTEX::File::isKTEXFile(const std::string& path) {
 	uint32_t magic;
 
 	std::ifstream file(path.c_str(), std::ifstream::in | std::ifstream::binary);
@@ -37,13 +32,13 @@ bool KTech::KTEX::File::isKTEXFile(const std::string& path) {
 
 	file.imbue(std::locale::classic());
 
-	raw_read_integer(file, magic);
+	IOHelper::raw_read_integer(file, magic);
 
 	return file && magic == HeaderSpecs::MAGIC_NUMBER;
 }
 
-void KTech::KTEX::File::dumpTo(const std::string& path) {
-	if(options::verbosity >= 0) {
+void KTools::KTEX::File::dumpTo(const std::string& path, int verbosity) {
+	if(verbosity >= 0) {
 		std::cout << "Dumping KTEX to `" << path << "'..." << std::endl;	
 	}
 
@@ -53,15 +48,15 @@ void KTech::KTEX::File::dumpTo(const std::string& path) {
 
 	out.imbue(std::locale::classic());
 
-	dump(out);
+	dump(out, verbosity);
 
-	if(options::verbosity >= 0) {
+	if(verbosity >= 0) {
 		std::cout << "Finished dumping." << std::endl;
 	}
 }
 
-void KTech::KTEX::File::loadFrom(const std::string& path) {
-	if(options::verbosity >= 0) {
+void KTools::KTEX::File::loadFrom(const std::string& path, int verbosity, bool info_only) {
+	if(verbosity >= 0) {
 		std::cout << "Loading KTEX from `" << path << "'..." << std::endl;
 	}
 	
@@ -71,14 +66,14 @@ void KTech::KTEX::File::loadFrom(const std::string& path) {
 
 	in.imbue(std::locale::classic());
 
-	load(in);
+	load(in, verbosity, info_only);
 
-	if(options::verbosity >= 0) {
+	if(verbosity >= 0) {
 		std::cout << "Finished loading." << std::endl;
 	}
 }
 
-void KTech::KTEX::File::Header::print(std::ostream& out, size_t indentation, const std::string& indent_string) const {
+void KTools::KTEX::File::Header::print(std::ostream& out, int verbosity, size_t indentation, const std::string& indent_string) const {
 	using namespace std;
 
 	std::string prefix;
@@ -92,7 +87,7 @@ void KTech::KTEX::File::Header::print(std::ostream& out, size_t indentation, con
 
 		out << prefix << spec.id;
 
-		if(options::verbosity >= 2) {
+		if(verbosity >= 2) {
 			out << ":" << endl;
 			out << prefix << indent_string << "length: " << spec.length << endl;
 			out << prefix << indent_string << "offset: " << spec.offset << endl;
@@ -113,45 +108,45 @@ void KTech::KTEX::File::Header::print(std::ostream& out, size_t indentation, con
 	}
 }
 
-std::ostream& KTech::KTEX::File::Header::dump(std::ostream& out) const {
-	write_integer(out, MAGIC_NUMBER);
-	write_integer(out, data);
+std::ostream& KTools::KTEX::File::Header::dump(std::ostream& out) const {
+	IOHelper::raw_write_integer(out, MAGIC_NUMBER);
+	io.write_integer(out, data);
 	return out;
 }
 
-std::istream& KTech::KTEX::File::Header::load(std::istream& in) {
+std::istream& KTools::KTEX::File::Header::load(std::istream& in) {
 	reset();
 
 	uint32_t magic;
-	raw_read_integer(in, magic);
+	io.raw_read_integer(in, magic);
 	if(!in || magic != MAGIC_NUMBER) {
 		throw(KToolsError("Attempt to read a non-KTEX file as KTEX."));
 	}
 
-	raw_read_integer(in, data);
+	io.raw_read_integer(in, data);
 
 	// Here we infer the endianness based on the fill portion of the
 	// header, defaulting to little endian if we can't reach a
 	// conclusion.
-	source_endianness = ktech_LITTLE_ENDIAN;
+	io.setLittleSource();
 	if( getField("fill") == FieldSpecs["fill"].value_default ) {
-		source_endianness = ktech_NATIVE_ENDIANNESS;
+		io.setNativeSource();
 	}
 	else {
 		Header header_cp = *this;
-		reorder(header_cp.data);
+		io.reorder(header_cp.data);
 		if( header_cp.getField("fill") == FieldSpecs["fill"].value_default ) {
-			source_endianness = ktech_INVERSE_NATIVE_ENDIANNESS;
+			io.setInverseNativeSource();
 		}
 	}
-	if(source_endianness == ktech_INVERSE_NATIVE_ENDIANNESS) {
-		reorder(data);
+	if(io.isInverseNativeSource()) {
+		io.reorder(data);
 	}
 
 	return in;
 }
 
-void KTech::KTEX::File::Mipmap::print(std::ostream& out, size_t indentation, const std::string& indent_string) const {
+void KTools::KTEX::File::Mipmap::print(std::ostream& out, size_t indentation, const std::string& indent_string) const {
 	using namespace std;
 
 	std::string prefix;
@@ -164,39 +159,39 @@ void KTech::KTEX::File::Mipmap::print(std::ostream& out, size_t indentation, con
 	out << prefix << "data size: " << datasz << endl;
 }
 
-std::ostream& KTech::KTEX::File::Mipmap::dumpPre(std::ostream& out) const {
-	write_integer(out, width);
-	write_integer(out, height);
-	write_integer(out, pitch);
-	write_integer(out, datasz);
+std::ostream& KTools::KTEX::File::Mipmap::dumpPre(std::ostream& out) const {
+	parent->io.write_integer(out, width);
+	parent->io.write_integer(out, height);
+	parent->io.write_integer(out, pitch);
+	parent->io.write_integer(out, datasz);
 
 	return out;
 }
 
-std::ostream& KTech::KTEX::File::Mipmap::dumpPost(std::ostream& out) const {
+std::ostream& KTools::KTEX::File::Mipmap::dumpPost(std::ostream& out) const {
 	out.write( reinterpret_cast<const char*>( data ), datasz );
 
 	return out;
 }
 
-std::istream& KTech::KTEX::File::Mipmap::loadPre(std::istream& in) {
-	read_integer(in, width);
-	read_integer(in, height);
-	read_integer(in, pitch);
-	read_integer(in, datasz);
+std::istream& KTools::KTEX::File::Mipmap::loadPre(std::istream& in) {
+	parent->io.read_integer(in, width);
+	parent->io.read_integer(in, height);
+	parent->io.read_integer(in, pitch);
+	parent->io.read_integer(in, datasz);
 
 	setDataSize( datasz );
 
 	return in;
 }
 
-std::istream& KTech::KTEX::File::Mipmap::loadPost(std::istream& in) {
+std::istream& KTools::KTEX::File::Mipmap::loadPost(std::istream& in) {
 	in.read( reinterpret_cast<char*>( data ), datasz );
 
 	return in;
 }
 
-void KTech::KTEX::File::print(std::ostream& out, size_t indentation, const std::string& indent_string) const {
+void KTools::KTEX::File::print(std::ostream& out, int verbosity, size_t indentation, const std::string& indent_string) const {
 	using namespace std;
 
 	std::string prefix;
@@ -212,9 +207,9 @@ void KTech::KTEX::File::print(std::ostream& out, size_t indentation, const std::
 	}
 
 	out << prefix << "Header:" << endl;
-	header.print(out, indentation + 1, indent_string);
+	header.print(out, verbosity, indentation + 1, indent_string);
 
-	if(options::verbosity >= 1) {
+	if(verbosity >= 1) {
 
 		for(size_t i = 0; i < mipmap_count; ++i) {
 			out << "Mipmap #" << (i + 1) << ":" << endl;
@@ -223,14 +218,14 @@ void KTech::KTEX::File::print(std::ostream& out, size_t indentation, const std::
 	}
 }
 
-std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
+std::ostream& KTools::KTEX::File::dump(std::ostream& out, int verbosity) const {
 	size_t mipmap_count = header.getField("mipmap_count");
 
-	if(options::verbosity >= 1) {
+	if(verbosity >= 1) {
 		std::cout << "Dumping KTEX header..." << std::endl;
 	}
-	if(options::verbosity >= 2) {
-		header.print(std::cout, 1);
+	if(verbosity >= 2) {
+		header.print(std::cout, verbosity, 1);
 	}
 	if(!header.dump(out)) {
 		throw(KToolsError("Failed to write KTEX header."));
@@ -238,14 +233,14 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 
 	// If it's at least 2, the mipmap count was already printed as part of
 	// the header.
-	if(options::verbosity == 1) {
+	if(verbosity == 1) {
 		std::cout << "Mipmap count: " << mipmap_count << std::endl;
 	}
 
 	for(size_t i = 0; i < mipmap_count; ++i) {
-		if(options::verbosity >= 1) {
+		if(verbosity >= 1) {
 			std::cout << "Dumping (pre) mipmap #" << (i + 1) << "..." << std::endl;
-			if(options::verbosity >= 2) {
+			if(verbosity >= 2) {
 				Mipmaps[i].print(std::cout, 1);
 			}
 		}
@@ -256,7 +251,7 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 	}
 
 	for(size_t i = 0; i < mipmap_count; ++i) {
-		if(options::verbosity >= 1) {
+		if(verbosity >= 1) {
 			std::cout << "Dumping (post) mipmap #" << (i + 1) << "..." << std::endl;
 		}
 
@@ -268,27 +263,27 @@ std::ostream& KTech::KTEX::File::dump(std::ostream& out) const {
 	return out;
 }
 
-std::istream& KTech::KTEX::File::load(std::istream& in) {
-	if(options::verbosity >= 1) {
+std::istream& KTools::KTEX::File::load(std::istream& in, int verbosity, bool info_only) {
+	if(verbosity >= 1) {
 		std::cout << "Loading KTEX header..." << std::endl;
 	}
 	if(!header.load(in)) {
 		throw(KToolsError("Failed to read KTEX header."));
 	}
-	if(options::verbosity >= 2) {
-		header.print(std::cout, 1);
+	if(verbosity >= 2) {
+		header.print(std::cout, verbosity, 1);
 	}
 
 	size_t mipmap_count = header.getField("mipmap_count");
 
-	if(options::verbosity == 1) {
+	if(verbosity == 1) {
 		std::cout << "Mipmap count: " << mipmap_count << std::endl;
 	}
 
 	reallocateMipmaps(mipmap_count);
 
 	for(size_t i = 0; i < mipmap_count; ++i) {
-		if(options::verbosity >= 1) {
+		if(verbosity >= 1) {
 			std::cout << "Loading (pre) mipmap #" << (i + 1) << "..." << std::endl;
 		}
 
@@ -296,15 +291,15 @@ std::istream& KTech::KTEX::File::load(std::istream& in) {
 			throw(KToolsError("Failed to read KTEX mipmap."));
 		}
 
-		if(options::verbosity >= 2) {
+		if(verbosity >= 2) {
 			Mipmaps[i].print(std::cout, 1);
 		}
 	}
 
-	if(options::info) return in;
+	if(info_only) return in;
 
 	for(size_t i = 0; i < mipmap_count; ++i) {
-		if(options::verbosity >= 1) {
+		if(verbosity >= 1) {
 			std::cout << "Loading (post) mipmap #" << (i + 1) << "..." << std::endl;
 		}
 
@@ -314,7 +309,7 @@ std::istream& KTech::KTEX::File::load(std::istream& in) {
 	}
 
 	if(in.peek() != EOF) {
-		std::cerr << "KTech warning: There is leftover data in the input TEX file." << std::endl;
+		std::cerr << "Warning: There is leftover data in the input TEX file." << std::endl;
 	}
 
 	return in;
@@ -349,13 +344,13 @@ static std::string getMagickString(File::Header header) {
 	return internal_flag;
 }
 
-KTech::KTEX::File::CompressionFormat KTech::KTEX::File::getCompressionFormat() const {
-	KTech::KTEX::File::CompressionFormat fmt;
+KTools::KTEX::File::CompressionFormat KTools::KTEX::File::getCompressionFormat() const {
+	KTools::KTEX::File::CompressionFormat fmt;
 	fmt.squish_flags = getSquishCompressionFlag(header, fmt.is_uncompressed);
 	return fmt;
 }
 
-Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipmap& M, const KTech::KTEX::File::CompressionFormat& fmt) const {
+Magick::Image KTools::KTEX::File::DecompressMipmap(const KTools::KTEX::File::Mipmap& M, const KTools::KTEX::File::CompressionFormat& fmt, int verbosity) const {
 	Magick::Image img;
 	Magick::Blob B;
 
@@ -368,7 +363,7 @@ Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipma
 		return img;
 
 	if(!fmt.is_uncompressed) {
-		if(options::verbosity >= 0) {
+		if(verbosity >= 0) {
 				std::cout << "Decompressing " << width << "x" << height << " KTEX image into RGBA..." << std::endl;
 		}
 		squish::u8* rgba = new squish::u8[4*width*height];
@@ -379,7 +374,7 @@ Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipma
 	else {
 		std::string magick_str = getMagickString(header);
 
-		if(options::verbosity >= 0) {
+		if(verbosity >= 0) {
 			std::cout << "Decompressing " << width << "x" << height << " KTEX image into ";
 			if(magick_str == "RGBA") {
 				std::cout << "RGBA";
@@ -396,7 +391,7 @@ Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipma
 	}
 
 
-	if(options::verbosity >= 0) {
+	if(verbosity >= 0) {
 		std::cout << "Decompressed." << std::endl;
 	}
 
@@ -406,7 +401,9 @@ Magick::Image KTech::KTEX::File::DecompressMipmap(const KTech::KTEX::File::Mipma
 	return img;
 }
 
-void KTech::KTEX::File::CompressMipmap(KTech::KTEX::File::Mipmap& M, const KTech::KTEX::File::CompressionFormat& fmt, Magick::Image img) const {
+void KTools::KTEX::File::CompressMipmap(KTools::KTEX::File::Mipmap& M, const KTools::KTEX::File::CompressionFormat& fmt, Magick::Image img, int verbosity) const {
+	(void)verbosity;
+
 	std::string magick_str = "RGBA";
 	size_t pixel_size = 4;
 	if(fmt.is_uncompressed) {

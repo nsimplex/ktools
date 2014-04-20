@@ -16,12 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_KTEX_SPECS_HPP
-#define KTECH_KTEX_SPECS_HPP
+#ifndef KTOOLS_KTEX_SPECS_HPP
+#define KTOOLS_KTEX_SPECS_HPP
 
 #include "ktex/headerfield_specs.hpp"
 
-namespace KTech {
+namespace KTools {
 	namespace KTEX {
 		struct HeaderSpecs {
 			static const uint32_t MAGIC_NUMBER;

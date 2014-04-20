@@ -1,5 +1,5 @@
-#ifndef KTECH_COMPAT_COMMON_HPP
-#define KTECH_COMPAT_COMMON_HPP
+#ifndef KTOOLS_COMPAT_COMMON_HPP
+#define KTOOLS_COMPAT_COMMON_HPP
 
 #if defined(_WIN32) || defined(WIN32)
 #	define IS_WINDOWS 1

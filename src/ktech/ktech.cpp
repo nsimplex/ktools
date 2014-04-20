@@ -42,7 +42,7 @@ static bool should_resize() {
 }
 
 static void resize_image(Magick::Image& img) {
-	bool did_something = false;
+	if(!should_resize()) return;
 
 	Magick::Geometry size = img.size();
 	size_t w0 = size.width(), h0 = size.height();
@@ -52,27 +52,19 @@ static void resize_image(Magick::Image& img) {
 	if(options::width != Nothing && options::height != Nothing) {
 		size.width(options::width);
 		size.height(options::height);
-		did_something = true;
 	}
 	else if(options::width != Nothing) {
 		size.width(options::width);
 		size.height((h0*size.width())/w0);
-		did_something = true;
 	}
 	else if(options::height != Nothing) {
 		size.height(options::height);
 		size.width((w0*size.height())/h0);
-		did_something = true;
 	}
 
 	if(options::pow2) {
 		size.width(BitOp::Pow2Rounder::roundUp(size.width()));
 		size.height(BitOp::Pow2Rounder::roundUp(size.height()));
-		did_something = true;
-	}
-
-	if(!did_something) {
-		return;
 	}
 
 	std::string operation_verb;
@@ -169,11 +161,13 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	typedef std::vector<Magick::Image> image_container_t;
 	typedef image_container_t::iterator image_iterator_t;
 
+	const int verbosity = options::verbosity;
+
 	if(input_paths.size() > 1 && should_resize()) {
 		throw Error("Attempt to resize a mipchain.");
 	}
 
-	if(options::verbosity >= 0) {
+	if(verbosity >= 0) {
 		cout << "Loading non-TEX from `" << input_paths.front() << "'";
 		for(pc_iter it = ++input_paths.begin(); it != input_paths.end(); ++it) {
 			cout << ", `" << *it << "'";
@@ -186,13 +180,11 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	}
 	read_images( input_paths, imgs );
 	assert( input_paths.size() == imgs.size() );
-	if(options::verbosity >= 0) {
+	if(verbosity >= 0) {
 		cout << "Finished loading." << endl;
 	}
 
-	if(should_resize()) {
-		resize_image( imgs.front() );
-	}
+	resize_image( imgs.front() );
 
 	generate_mipmaps( imgs );
 
@@ -203,34 +195,34 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	}
 
 	if(!options::no_premultiply) {
-		if(options::verbosity >= 1) {
+		if(verbosity >= 1) {
 			std::cout << "Premultiplying alpha..." << std::endl;
 		}
 		std::for_each( imgs.begin(), imgs.end(), ImOp::premultiplyAlpha() );
 	}
-	else if(options::verbosity >= 1) {
+	else if(verbosity >= 1) {
 		std::cout << "Skipping alpha premultiplication..." << std::endl;
 	}
 
 	KTech::KTEX::File tex;
 	tex.header = h;
-	tex.CompressFrom(imgs.begin(), imgs.end());
-	tex.dumpTo(output_path);
+	tex.CompressFrom(imgs.begin(), imgs.end(), verbosity);
+	tex.dumpTo(output_path, verbosity);
 }
 
 static void convert_from_KTEX(const string& input_path, const string& output_path) {
-	int old_verbosity = options::verbosity;
-
+	const int verbosity = options::verbosity;
+	int load_verbosity = verbosity;
 	if(options::info) {
-		options::verbosity = -1;
+		load_verbosity = -1;
 	}
+
 	KTech::KTEX::File tex;
-	tex.loadFrom(input_path);
-	options::verbosity = old_verbosity;
+	tex.loadFrom(input_path, load_verbosity, options::info);
 
 	if(options::info) {
 		std::cout << "File: " << input_path << endl;
-		tex.print(std::cout);
+		tex.print(std::cout, verbosity);
 	}
 	else {
 		static const std::string fmt_string = "%02d";
@@ -243,19 +235,19 @@ static void convert_from_KTEX(const string& input_path, const string& output_pat
 			if(should_resize()) {
 				throw Error("Attempt to resize a mipchain.");
 			}
-			tex.Decompress( std::back_inserter(imgs) );
+			tex.Decompress( std::back_inserter(imgs), verbosity );
 		}
 		else {
-			imgs.push_back( tex.Decompress() );
+			imgs.push_back( tex.Decompress(verbosity) );
 		}
 
 		if(!options::no_premultiply) {
-			if(options::verbosity >= 1) {
+			if(verbosity >= 1) {
 				std::cout << "Demultiplying alpha..." << std::endl;
 			}
 			std::for_each( imgs.begin(), imgs.end(), ImOp::demultiplyAlpha() );
 		}
-		else if(options::verbosity >= 1) {
+		else if(verbosity >= 1) {
 			std::cout << "Skipping alpha demultiplication..." << std::endl;
 		}
 
@@ -263,7 +255,7 @@ static void convert_from_KTEX(const string& input_path, const string& output_pat
 
 		std::for_each( imgs.begin(), imgs.end(), Magick::qualityImage(options::image_quality) );
 
-		if(options::verbosity >= 0) {
+		if(verbosity >= 0) {
 			if(multiple_mipmaps) {
 				const size_t fmt_end = fmt_pos + fmt_string.length();
 				const size_t mipmap_count = tex.header.getField("mipmap_count");
@@ -291,7 +283,7 @@ static void convert_from_KTEX(const string& input_path, const string& output_pat
 		else {
 			ImOp::safeWrap( ImOp::write(output_path) )( imgs.front() );
 		}
-		if(options::verbosity >= 0) {
+		if(verbosity >= 0) {
 			std::cout << "Saved." << std::endl;
 		}
 	}

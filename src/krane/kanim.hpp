@@ -16,13 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_BASIC_HPP
-#define KTECH_BASIC_HPP
+#ifndef KRANE_KANIM_HPP
+#define KRANE_KANIM_HPP
 
-#include "ktools_common.hpp"
-
-namespace KTech {
-	using namespace KTools;
-}
+#include "krane_common.hpp"
 
 #endif

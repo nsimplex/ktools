@@ -2,8 +2,8 @@
  * Header-only library abstracting some filesystem properties.
  */
 
-#ifndef KTECH_COMPAT_FS_HPP
-#define KTECH_COMPAT_FS_HPP
+#ifndef KTOOLS_COMPAT_FS_HPP
+#define KTOOLS_COMPAT_FS_HPP
 
 #include "compat/common.hpp"
 #include "compat/posix.hpp"

@@ -16,13 +16,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_IMAGE_OPERATIONS_HPP
-#define KTECH_IMAGE_OPERATIONS_HPP
+#ifndef KTOOLS_IMAGE_OPERATIONS_HPP
+#define KTOOLS_IMAGE_OPERATIONS_HPP
 
-#include "ktech_common.hpp"
+#include "ktools_common.hpp"
 #include <functional>
 
-namespace KTech { namespace ImOp {
+namespace KTools { namespace ImOp {
 	typedef std::unary_function<Magick::Image&, void> unary_operation_t;
 	typedef std::unary_function<Magick::PixelPacket*, void> pixel_operation_t;
 

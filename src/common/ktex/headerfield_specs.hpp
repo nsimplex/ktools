@@ -16,12 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_KTEX_HEADERFIELDSPECS_HPP
-#define KTECH_KTEX_HEADERFIELDSPECS_HPP
+#ifndef KTOOLS_KTEX_HEADERFIELDSPECS_HPP
+#define KTOOLS_KTEX_HEADERFIELDSPECS_HPP
 
-#include "ktech_common.hpp"
+#include "ktools_common.hpp"
 
-namespace KTech {
+namespace KTools {
 	namespace KTEX {
 		struct HeaderFieldSpec {
 			typedef uint32_t value_t;

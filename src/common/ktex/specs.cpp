@@ -16,22 +16,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#include "ktech_common.hpp"
+#include "ktools_common.hpp"
 #include "ktex/specs.hpp"
 
-using namespace KTech;
-using namespace KTech::KTEX;
+using namespace KTools;
+using namespace KTools::KTEX;
 
 
-const KTech::KTEX::HeaderFieldSpec KTech::KTEX::HeaderFieldSpec::Invalid;
+const KTools::KTEX::HeaderFieldSpec KTools::KTEX::HeaderFieldSpec::Invalid;
 
 
 #define ARRAYLEN(A) sizeof(A)/sizeof(*A)
 
-typedef KTech::raw_pair<std::string, KTech::KTEX::HeaderFieldSpec::value_t> valpair_t;
+typedef KTools::raw_pair<std::string, KTools::KTEX::HeaderFieldSpec::value_t> valpair_t;
 
 
-const uint32_t KTech::KTEX::HeaderSpecs::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("KTEX");
+const uint32_t KTools::KTEX::HeaderSpecs::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("KTEX");
 
 
 static const valpair_t platform_values[] = {
@@ -84,11 +84,11 @@ static HeaderFieldSpec fieldspecs[] = {
 };
 
 
-const KTech::KTEX::HeaderSpecs::FieldSpecsMap_t KTech::KTEX::HeaderSpecs::FieldSpecs(fieldspecs, ARRAYLEN(fieldspecs));
+const KTools::KTEX::HeaderSpecs::FieldSpecsMap_t KTools::KTEX::HeaderSpecs::FieldSpecs(fieldspecs, ARRAYLEN(fieldspecs));
 
 /*
 // The specs table should be at the stack top.
-void KTech::KTEX::process_header_specs_table(lua_State* L) {
+void KTools::KTEX::process_header_specs_table(lua_State* L) {
 	const int top = lua_gettop(L);
 
 	assert( lua_type(L, -1) == LUA_TTABLE );

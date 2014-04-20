@@ -16,14 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KTECH_KTEX_HPP
-#define KTECH_KTEX_HPP
+#ifndef KTOOLS_KTEX_HPP
+#define KTOOLS_KTEX_HPP
 
-#include "ktech_common.hpp"
+#include "ktools_common.hpp"
 #include "ktex/specs.hpp"
-#include "ktech_options.hpp"
+#include "io_utils.hpp"
 
-namespace KTech {
+namespace KTools {
 	namespace KTEX {
 		class File : public NonCopyable {
 		public:
@@ -32,8 +32,9 @@ namespace KTech {
 			public:
 				typedef uint32_t data_t;
 				data_t data;
+
+				KTools::IOHelper io;
 	
-				// Assumes a little endian host layout.
 				HeaderFieldSpec::value_t getField(const std::string& id) const {
 					const HeaderFieldSpec& spec = FieldSpecs[id];
 
@@ -67,7 +68,7 @@ namespace KTech {
 					return data;
 				}
 	
-				void print(std::ostream& out, size_t indentation = 0, const std::string& indent_string = "\t") const;
+				void print(std::ostream& out, int verbosity, size_t indentation = 0, const std::string& indent_string = "\t") const;
 				std::ostream& dump(std::ostream& out) const;
 				std::istream& load(std::istream& in);
 
@@ -79,11 +80,25 @@ namespace KTech {
 				}
 
 				Header() { reset(); }
+
+				Header& operator=(const Header& h) {
+					data = h.data;
+					if(io.isUnknownSource()) {
+						io.copySource(h.io);
+					}
+					else if(io.hasInverseSourceOf(h.io)) {
+						io.reorder(data);
+					}
+					io.copyTarget(h.io);
+					return *this;
+				}
 			};
 
 			class Mipmap : public NonCopyable {
 			public:
 				typedef squish::u8 byte_t;
+
+				const File* parent;
 
 			private:
 				friend class File;
@@ -113,7 +128,7 @@ namespace KTech {
 					datasz = sz;
 				}
 
-				Mipmap() : data(NULL), datasz(0), width(0), height(0), pitch(0) {}
+				Mipmap() : parent(NULL), data(NULL), datasz(0), width(0), height(0), pitch(0) {}
 
 				~Mipmap() {
 					setDataSize(0);
@@ -137,6 +152,7 @@ namespace KTech {
 
 		public:
 			Header header;
+			KTools::IOHelper& io;
 			
 		private:
 			Mipmap* Mipmaps;
@@ -153,6 +169,9 @@ namespace KTech {
 				
 				if(howmany > 0) {
 					Mipmaps = new Mipmap[howmany];
+					for(size_t i = 0; i < howmany; i++) {
+						Mipmaps[i].parent = this;
+					}
 				}
 			}
 
@@ -161,44 +180,44 @@ namespace KTech {
 			// We use int for compliance with squish.
 			Magick::Blob getRGBA(int& width, int& height) const;
 
-			Magick::Image DecompressMipmap(const Mipmap& M, const CompressionFormat& fmt) const;
+			Magick::Image DecompressMipmap(const Mipmap& M, const CompressionFormat& fmt, int verbosity) const;
 
-			void CompressMipmap(Mipmap& M, const CompressionFormat& fmt, Magick::Image img) const;
+			void CompressMipmap(Mipmap& M, const CompressionFormat& fmt, Magick::Image img, int verbosity) const;
 
 		public:
 			static bool isKTEXFile(const std::string& path);
 
-			void print(std::ostream& out, size_t indentation = 0, const std::string& indent_string = "\t") const;
-			std::ostream& dump(std::ostream& out) const;
-			std::istream& load(std::istream& in);
+			void print(std::ostream& out, int verbosity, size_t indentation = 0, const std::string& indent_string = "\t") const;
+			std::ostream& dump(std::ostream& out, int verbosity) const;
+			std::istream& load(std::istream& in, int verbosity, bool info_only);
 
-			void dumpTo(const std::string& path);
-			void loadFrom(const std::string& path);
+			void dumpTo(const std::string& path, int verbosity);
+			void loadFrom(const std::string& path, int verbosity, bool info_only);
 
-			Magick::Image Decompress() const {
+			Magick::Image Decompress(int verbosity) const {
 				if(header.getField("mipmap_count") == 0) {
 					return Magick::Image();
 				}
-				return DecompressMipmap(Mipmaps[0], getCompressionFormat());
+				return DecompressMipmap(Mipmaps[0], getCompressionFormat(), verbosity);
 			}
 
 			template<typename OutputIterator>
-			void Decompress(OutputIterator it) const {
+			void Decompress(OutputIterator it, int verbosity) const {
 				const size_t num_mipmaps = header.getField("mipmap_count");
 				CompressionFormat fmt = getCompressionFormat();
 				for(size_t i = 0; i < num_mipmaps; i++) {
-					*it++ = DecompressMipmap(Mipmaps[i], fmt);
+					*it++ = DecompressMipmap(Mipmaps[i], fmt, verbosity);
 				}
 			}
 
-			void CompressFrom(Magick::Image img) {
+			void CompressFrom(Magick::Image img, int verbosity) {
 				std::list<Magick::Image> imglist;
 				imglist.push_back(img);
-				CompressFrom( imglist.begin(), imglist.end() );
+				CompressFrom( imglist.begin(), imglist.end(), verbosity );
 			}
 
 			template<typename InputIterator>
-			void CompressFrom(InputIterator first, InputIterator last) {
+			void CompressFrom(InputIterator first, InputIterator last, int verbosity) {
 				typedef typename InputIterator::value_type img_t;
 				if(first == last) return;
 
@@ -208,12 +227,12 @@ namespace KTech {
 				CompressionFormat fmt = getCompressionFormat();
 				img_t img = *first++;
 
-				if(KTech::options::verbosity >= 0) {
+				if(verbosity >= 0) {
 					std::cout << "Compressing " << img.columns() << "x" << img.rows() << " image into KTEX..." << std::endl;
 				}
 
 				while(true) {
-					CompressMipmap( *M, fmt, img );
+					CompressMipmap( *M, fmt, img, verbosity );
 
 					if(first == last)
 						break;
@@ -222,12 +241,12 @@ namespace KTech {
 					M++;
 				}
 
-				if(KTech::options::verbosity >= 0) {
+				if(verbosity >= 0) {
 					std::cout << "Compressed." << std::endl;
 				}
 			}
 
-			File() : Mipmaps(NULL) {}
+			File() : header(), io(header.io), Mipmaps(NULL) {}
 			~File() { deallocateMipmaps(); }
 		};
 

@@ -71,7 +71,7 @@ if(HAVE_MATH_LIB)
 endif(HAVE_MATH_LIB)
 
 set( ktech_LIBS "${COMMON_LIBS}" )
-set( kraze_LIBS "${COMMON_LIBS}" )
+set( krane_LIBS "${COMMON_LIBS}" )
 
 
 CHECK_INCLUDE_FILES (cstddef HAVE_CSTDDEF)
@@ -116,21 +116,23 @@ add_subdirectory(src)
 
 list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/common ${PROJECT_SOURCE_DIR}/lib )
 set( KTECH_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/ktech )
-set( KRAZE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/kraze )
+set( KRANE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/krane )
 
 link_directories( ${LINK_DIRS} )
 
 # add_executable(<name> [WIN32] [MACOSX_BUNDLE] ...
 if(NOT WIN32)
 	add_executable(ktech ${ktech_SOURCES} ${ktech_HEADERS})
+	add_executable(krane ${krane_SOURCES} ${krane_HEADERS})
 else()
-#	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
+	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
+	add_executable(krane WIN32 ${krane_SOURCES} ${krane_HEADERS})
 endif()
-message( "LIBS: ${ktech_LIBS}" )
 target_link_libraries( ktech ${ktech_LIBS} )
+target_link_libraries( krane ${krane_LIBS} )
 
 set_property( TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}" )
-#set_property( TARGET kraze PROPERTY INCLUDE_DIRECTORIES "${KRAZE_INCLUDE_DIRS}" )
+set_property( TARGET krane PROPERTY INCLUDE_DIRECTORIES "${KRANE_INCLUDE_DIRS}" )
 
 if(WIN32)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
@@ -142,19 +144,19 @@ if(WIN32)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
    set_target_properties(ktech PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
 
-   set_target_properties(kraze PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
-   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
-   set_target_properties(kraze PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
-   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
-   set_target_properties(kraze PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
-   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_RELEASE "_CONSOLE")
-   set_target_properties(kraze PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
-   set_target_properties(kraze PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
+   set_target_properties(krane PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+   set_target_properties(krane PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
+   set_target_properties(krane PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+   set_target_properties(krane PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
+   set_target_properties(krane PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+   set_target_properties(krane PROPERTIES COMPILE_DEFINITIONS_RELEASE "_CONSOLE")
+   set_target_properties(krane PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
+   set_target_properties(krane PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "_CONSOLE")
 endif(WIN32)
 
 
 #INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
-
+#INSTALL(TARGETS krane RUNTIME DESTINATION bin)
 
 
 #
