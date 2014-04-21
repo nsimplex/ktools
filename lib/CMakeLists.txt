@@ -5,3 +5,4 @@ elseif(NOT DISABLE_CPU_EXTENSIONS)
 endif()
 
 add_subdirectory( squish )
+add_subdirectory( pugixml )

@@ -15,7 +15,10 @@ ENABLE_LANGUAGE(C)
 
 set( COMMON_INCLUDE_DIRS "" )
 set( LINK_DIRS "" )
-set( COMMON_LIBS "squish" )
+set( COMMON_LIBS "libktool" "squish" )
+
+set( ktech_LIBS "" )
+set( krane_LIBS "pugixml" )
 
 
 include(CheckIncludeFile)
@@ -70,8 +73,8 @@ if(HAVE_MATH_LIB)
 	list( APPEND COMMON_LIBS "m" )
 endif(HAVE_MATH_LIB)
 
-set( ktech_LIBS "${COMMON_LIBS}" )
-set( krane_LIBS "${COMMON_LIBS}" )
+list( APPEND ktech_LIBS "${COMMON_LIBS}" )
+list( APPEND krane_LIBS "${COMMON_LIBS}" )
 
 
 CHECK_INCLUDE_FILES (cstddef HAVE_CSTDDEF)
@@ -117,6 +120,7 @@ add_subdirectory(src)
 list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/common ${PROJECT_SOURCE_DIR}/lib )
 set( KTECH_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/ktech )
 set( KRANE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/krane )
+set( LIBKTOOL_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} )
 
 link_directories( ${LINK_DIRS} )
 
@@ -128,11 +132,14 @@ else()
 	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
 	add_executable(krane WIN32 ${krane_SOURCES} ${krane_HEADERS})
 endif()
+add_library(libktool STATIC ${libktool_SOURCES} ${libktool_HEADERS})
+
 target_link_libraries( ktech ${ktech_LIBS} )
 target_link_libraries( krane ${krane_LIBS} )
 
 set_property( TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}" )
 set_property( TARGET krane PROPERTY INCLUDE_DIRECTORIES "${KRANE_INCLUDE_DIRS}" )
+set_property( TARGET libktool PROPERTY INCLUDE_DIRECTORIES "${LIBKTOOL_INCLUDE_DIRS}" )
 
 if(WIN32)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")

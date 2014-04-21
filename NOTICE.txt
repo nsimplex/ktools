@@ -14,8 +14,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-This software uses the Squish library, licensed under the MIT License. The full license is at lib/squish/LICENSE.txt.
+This software uses the Squish library, licensed under the MIT license. Its full license is at lib/squish/LICENSE.txt.
 
-This software uses the tclap library, licensed under the MIT license. The full license is at lib/tclap/LICENSE.txt.
+This software uses the tclap library, licensed under the MIT license. Its full license is at lib/tclap/LICENSE.txt.
 
-This software uses a file from the Boost library, licensed under the Boost Software License, version 1.0. The full license is at lib/boost/LICENSE_1_0.txt.
+This software uses a file from the Boost library, licensed under the Boost Software License, version 1.0. Its full license is at lib/boost/LICENSE_1_0.txt.
+
+This software uses the pugixml library, licensed under the MIT license. Its full license is at lib/pugixml/LICENSE.txt.
