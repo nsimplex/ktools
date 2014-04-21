@@ -1,3 +1,11 @@
+# ktools
+
+This README has yet to be updated to account for the new krane tool.
+
+
+---
+
+
 ktech
 ==========
 A Unix converter for Klei Entertainment's KTEX texture format.
