@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include "ktex/ktex.hpp"
-#include "io_utils.hpp"
+#include "binary_io_utils.hpp"
 
 
 using namespace KTools;
@@ -32,7 +32,7 @@ bool KTools::KTEX::File::isKTEXFile(const std::string& path) {
 
 	file.imbue(std::locale::classic());
 
-	IOHelper::raw_read_integer(file, magic);
+	BinIOHelper::raw_read_integer(file, magic);
 
 	return file && magic == HeaderSpecs::MAGIC_NUMBER;
 }
@@ -109,7 +109,7 @@ void KTools::KTEX::File::Header::print(std::ostream& out, int verbosity, size_t 
 }
 
 std::ostream& KTools::KTEX::File::Header::dump(std::ostream& out) const {
-	IOHelper::raw_write_integer(out, MAGIC_NUMBER);
+	BinIOHelper::raw_write_integer(out, MAGIC_NUMBER);
 	io.write_integer(out, data);
 	return out;
 }

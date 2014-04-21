@@ -80,8 +80,8 @@ namespace KTools { namespace ImOp {
 			using namespace Magick;
 
 			double a = 1 - double(p->opacity)/MaxRGB;
-			if(a <= 0) a = 0;
-			else if(a > 1) a = 1;
+			if(a <= 0.1) a = 0;
+			else if(a >= 1) a = 1;
 
 			p->red = multiplyQuantum(p->red, a);
 			p->green = multiplyQuantum(p->green, a);
@@ -144,6 +144,8 @@ namespace KTools { namespace ImOp {
 
 	class cleanNoise : public unary_operation_t {
 	public:
+		cleanNoise() {}
+
 		void operator()(Magick::Image& img) const {
 			using namespace Magick;
 
@@ -152,10 +154,13 @@ namespace KTools { namespace ImOp {
 			Image alpha = img;
 			alpha.channel(MatteChannel);
 			alpha.negate();
-			alpha.medianFilter(0.75);
+
+			alpha.reduceNoise(1.6);
 
 			img.matte(false);
 			img.composite(alpha, 0, 0, CopyOpacityCompositeOp);
+
+			img.matte(true);
 		}
 	};
 

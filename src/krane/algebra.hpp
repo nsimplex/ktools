@@ -304,8 +304,9 @@ namespace KTools {
 		void getLinearPart(SquareMatrix<n, T>& M) const {
 			for(size_t i = 0; i < n; i++) {
 				const T* row = (*this)[i];
+				T* Mrow = M[i];
 				for(size_t j = 0; j < n; j++) {
-					M[i][j] = row[j];
+					Mrow[j] = row[j];
 				}
 			}
 		}
@@ -316,9 +317,25 @@ namespace KTools {
 			return result;
 		}
 
+		void setLinearPart(const SquareMatrix<n, T>& M) {
+			for(size_t i = 0; i < n; i++) {
+				T* row = (*this)[i];
+				const T* Mrow = M[i];
+				for(size_t j = 0; j < n; j++) {
+					row[j] = Mrow[j];
+				}
+			}
+		}
+
 		void getTranslation(Vector<n, T>& v) const {
 			for(size_t i = 0; i < n; i++) {
 				v[i] = (*this)[i][n];
+			}
+		}
+
+		void setTranslation(const Vector<n, T>& v) {
+			for(size_t i = 0; i < n; i++) {
+				(*this)[i][n] = v[i];
 			}
 		}
 
@@ -328,6 +345,53 @@ namespace KTools {
 			return result;
 		}
 	};
+
+	/*
+	 * Takes the coordinates of what is taken to be a 2x2 matrix.
+	 */
+	template<typename T>
+	inline void raw_invert(T& a, T& b, T& c, T& d) {
+		T invdet = 1/(a*d - c*b);
+
+		std::swap( a, d );
+
+		a *= invdet;
+		d *= invdet;
+		c *= -invdet;
+		b *= -invdet;
+	}
+
+	template<typename T>
+	inline void invert(SquareMatrix<2, T>& M) {
+		raw_invert( M[0][0], M[0][1], M[1][0], M[1][1] );
+	}
+
+	template<typename T>
+	inline SquareMatrix<2, T> inverseOf(const SquareMatrix<2, T>& M) {
+		SquareMatrix<2, T> N(M);
+		invert(N);
+		return N;
+	}
+
+	template<typename T>
+	inline void invert(ProjectiveMatrix<2, T>& M) {
+		Vector<2, T> v;
+		M.getTranslation(v);
+
+		M[0][2] = 0;
+		M[1][2] = 0;
+
+		raw_invert(M[0][0], M[0][1], M[1][0], M[1][1]);
+
+		M.setTranslation( -M*v );
+	}
+
+	template<typename T>
+	inline void inverseOf(const ProjectiveMatrix<2, T>& M) {
+		ProjectiveMatrix<2, T> N(M);
+		invert(N);
+		return N;
+	}
 
 	/*
 	 * The first element has the xyz coordinates, the second the uvw ones.

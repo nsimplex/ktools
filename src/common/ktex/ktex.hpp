@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ktools_common.hpp"
 #include "ktex/specs.hpp"
-#include "io_utils.hpp"
+#include "binary_io_utils.hpp"
 
 namespace KTools {
 	namespace KTEX {
@@ -33,7 +33,7 @@ namespace KTools {
 				typedef uint32_t data_t;
 				data_t data;
 
-				KTools::IOHelper io;
+				KTools::BinIOHelper io;
 	
 				HeaderFieldSpec::value_t getField(const std::string& id) const {
 					const HeaderFieldSpec& spec = FieldSpecs[id];
@@ -152,7 +152,7 @@ namespace KTools {
 
 		public:
 			Header header;
-			KTools::IOHelper& io;
+			KTools::BinIOHelper& io;
 			
 		private:
 			Mipmap* Mipmaps;
