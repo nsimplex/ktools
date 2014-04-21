@@ -20,5 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KRANE_HPP
 
 #include "krane_common.hpp"
+#include "kbuild.hpp"
+#include "kanim.hpp"
 
 #endif

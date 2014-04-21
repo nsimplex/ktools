@@ -102,6 +102,7 @@ namespace KTools {
 		U second;
 	};
 
+	static const class Nothing {} Nil;
 
 	template<typename T> class Maybe;
 
@@ -125,6 +126,7 @@ namespace KTools {
 		}
 
 		Maybe() : is_nothing(true) {}
+		Maybe(Nothing) : is_nothing(true) {}
 		Maybe(const Maybe& m) { *this = m; }
 
 		template<typename U>
@@ -132,18 +134,26 @@ namespace KTools {
 			return is_nothing && m.is_nothing;
 		}
 
-		template<typename U>
-		bool operator!=(const Maybe<U>& m) const {
-			return !(*this == m);
+		bool operator==(Nothing) const {
+			return is_nothing;
+		}
+
+		friend bool operator==(Nothing, const Maybe& m) {
+			return m.is_nothing;
 		}
 
 		bool operator==(const Maybe& m) const {
 			return (is_nothing && m.is_nothing) || (!is_nothing && !m.is_nothing && val == m.val);
 		}
 
+		template<typename U>
+		bool operator!=(const U& u) const {
+			return !(*this == u);
+		}
+
 		T value() const {
 			if(is_nothing) {
-				throw Error("Attempt to cast Nothing to a value.");
+				throw Error("Attempt to cast Nil to a value.");
 			}
 			return val;
 		}
@@ -157,8 +167,6 @@ namespace KTools {
 	inline Maybe<T> Just(T val) {
 		return Maybe<T>(val);
 	}
-
-	extern Maybe<bool> Nothing;
 }
 
 #endif

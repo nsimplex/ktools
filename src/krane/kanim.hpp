@@ -21,4 +21,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "krane_common.hpp"
 
+namespace Krane {
+	class KAnim {
+	public:
+		static const uint32_t MAGIC_NUMBER;
+
+		static const int32_t MIN_VERSION;
+		static const int32_t MAX_VERSION;
+
+	private:
+		int32_t version;
+
+	public:
+		static bool checkVersion(int32_t v) {
+			return MIN_VERSION <= v && v <= MAX_VERSION;
+		}
+
+		bool checkVersion() const {
+			return checkVersion(version);
+		}
+
+		void versionWarn() const {
+			if(!checkVersion()) {
+				std::cerr << "WARNING: got animation with unsupported encoding version " << version << "." << std::endl;
+			}
+		}
+	};
+}
+
 #endif

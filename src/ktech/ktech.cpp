@@ -29,8 +29,6 @@ using namespace Compat;
 using namespace std;
 
 
-KTech::Maybe<bool> KTech::Nothing;
-
 
 template<typename IntegerType>
 const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = Pow2Rounder::roundDown<IntegerType>( std::numeric_limits<IntegerType>::max() );
@@ -38,7 +36,7 @@ const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = 
 
 
 static bool should_resize() {
-	return options::width != Nothing || options::height != Nothing || options::pow2;
+	return options::width != Nil || options::height != Nil || options::pow2;
 }
 
 static void resize_image(Magick::Image& img) {
@@ -49,15 +47,15 @@ static void resize_image(Magick::Image& img) {
 
 	size.aspect(true);
 
-	if(options::width != Nothing && options::height != Nothing) {
+	if(options::width != Nil && options::height != Nil) {
 		size.width(options::width);
 		size.height(options::height);
 	}
-	else if(options::width != Nothing) {
+	else if(options::width != Nil) {
 		size.width(options::width);
 		size.height((h0*size.width())/w0);
 	}
-	else if(options::height != Nothing) {
+	else if(options::height != Nil) {
 		size.height(options::height);
 		size.width((w0*size.height())/h0);
 	}

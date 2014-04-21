@@ -68,7 +68,7 @@ namespace KTools {
 					return data;
 				}
 	
-				void print(std::ostream& out, int verbosity, size_t indentation = 0, const std::string& indent_string = "\t") const;
+				void print(std::ostream& out, int verbosity = -1, size_t indentation = 0, const std::string& indent_string = "\t") const;
 				std::ostream& dump(std::ostream& out) const;
 				std::istream& load(std::istream& in);
 
@@ -180,21 +180,21 @@ namespace KTools {
 			// We use int for compliance with squish.
 			Magick::Blob getRGBA(int& width, int& height) const;
 
-			Magick::Image DecompressMipmap(const Mipmap& M, const CompressionFormat& fmt, int verbosity) const;
+			Magick::Image DecompressMipmap(const Mipmap& M, const CompressionFormat& fmt, int verbosity = -1) const;
 
-			void CompressMipmap(Mipmap& M, const CompressionFormat& fmt, Magick::Image img, int verbosity) const;
+			void CompressMipmap(Mipmap& M, const CompressionFormat& fmt, Magick::Image img, int verbosity = -1) const;
 
 		public:
 			static bool isKTEXFile(const std::string& path);
 
-			void print(std::ostream& out, int verbosity, size_t indentation = 0, const std::string& indent_string = "\t") const;
-			std::ostream& dump(std::ostream& out, int verbosity) const;
-			std::istream& load(std::istream& in, int verbosity, bool info_only);
+			void print(std::ostream& out, int verbosity = -1, size_t indentation = 0, const std::string& indent_string = "\t") const;
+			std::ostream& dump(std::ostream& out, int verbosity = -1) const;
+			std::istream& load(std::istream& in, int verbosity = -1, bool info_only = false);
 
-			void dumpTo(const std::string& path, int verbosity);
-			void loadFrom(const std::string& path, int verbosity, bool info_only);
+			void dumpTo(const std::string& path, int verbosity = 1);
+			void loadFrom(const std::string& path, int verbosity = -1, bool info_only = false);
 
-			Magick::Image Decompress(int verbosity) const {
+			Magick::Image Decompress(int verbosity = -1) const {
 				if(header.getField("mipmap_count") == 0) {
 					return Magick::Image();
 				}
@@ -202,7 +202,7 @@ namespace KTools {
 			}
 
 			template<typename OutputIterator>
-			void Decompress(OutputIterator it, int verbosity) const {
+			void Decompress(OutputIterator it, int verbosity = -1) const {
 				const size_t num_mipmaps = header.getField("mipmap_count");
 				CompressionFormat fmt = getCompressionFormat();
 				for(size_t i = 0; i < num_mipmaps; i++) {
@@ -210,14 +210,14 @@ namespace KTools {
 				}
 			}
 
-			void CompressFrom(Magick::Image img, int verbosity) {
+			void CompressFrom(Magick::Image img, int verbosity = -1) {
 				std::list<Magick::Image> imglist;
 				imglist.push_back(img);
 				CompressFrom( imglist.begin(), imglist.end(), verbosity );
 			}
 
 			template<typename InputIterator>
-			void CompressFrom(InputIterator first, InputIterator last, int verbosity) {
+			void CompressFrom(InputIterator first, InputIterator last, int verbosity = -1) {
 				typedef typename InputIterator::value_type img_t;
 				if(first == last) return;
 
