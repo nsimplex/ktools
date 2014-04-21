@@ -3,13 +3,13 @@
 using namespace std;
 
 namespace Krane {
-	const uint32_t KBuild::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("BILD");
+	const uint32_t KBuildFile::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("BILD");
 
-	const int32_t KBuild::MIN_VERSION = 6;
-	const int32_t KBuild::MAX_VERSION = 6;
+	const int32_t KBuildFile::MIN_VERSION = 6;
+	const int32_t KBuildFile::MAX_VERSION = 6;
 
 
-	void KBuild::loadFrom(const std::string& path, int verbosity) {
+	void KBuildFile::loadFrom(const std::string& path, int verbosity) {
 		if(verbosity >= 0) {
 			std::cout << "Loading build from `" << path << "'..." << std::endl;
 		}
@@ -27,9 +27,7 @@ namespace Krane {
 		}
 	}
 
-	istream& KBuild::load(istream& in, int verbosity) {
-		typedef symbolmap_t::iterator symbol_iter;
-
+	istream& KBuildFile::load(istream& in, int verbosity) {
 		if(verbosity >= 1) {
 			cout << "Loading build information..." << endl;
 		}
@@ -51,19 +49,27 @@ namespace Krane {
 		}
 
 		versionRequire();
-		
+
+		build.load(in, verbosity);
+
+		return in;
+	}
+
+	istream& KBuild::load(istream& in, int verbosity) {
+		typedef symbolmap_t::iterator symbol_iter;
+
 		uint32_t numsymbols;
-		io.read_integer(in, numsymbols);
+		io->read_integer(in, numsymbols);
 
 		uint32_t numframes;
-		io.read_integer(in, numframes);
+		io->read_integer(in, numframes);
 
 		if(verbosity >= 1) {
 			cout << "Reading build name..." << endl;
 		}
 		uint32_t namelen;
 		char* raw_name;
-		io.read_integer(in, namelen);
+		io->read_integer(in, namelen);
 		raw_name = new char[namelen];
 		in.read(raw_name, namelen);
 		name.assign(raw_name, namelen);
@@ -77,12 +83,12 @@ namespace Krane {
 			cout << "Reading atlas names..." << endl;
 		}
 		uint32_t numatlases;
-		io.read_integer(in, numatlases);
+		io->read_integer(in, numatlases);
 		atlasnames.resize(numatlases);
 		for(uint32_t i = 0; i < numatlases; i++) {
 			uint32_t atlasnamelen;
 			char* raw_atlasname;
-			io.read_integer(in, atlasnamelen);
+			io->read_integer(in, atlasnamelen);
 			raw_atlasname = new char[atlasnamelen];
 			in.read(raw_atlasname, atlasnamelen);
 			atlasnames[i].assign(raw_atlasname, atlasnamelen);
@@ -99,9 +105,9 @@ namespace Krane {
 		uint32_t effective_alphaverts = 0;
 		for(uint32_t i = 0; i < numsymbols; i++) {
 			hash_t h;
-			io.read_integer(in, h);
+			io->read_integer(in, h);
 
-			if(verbosity >= 2) {
+			if(verbosity >= 4) {
 				cout << "\tLoading symbol 0x" << hex << h << dec << "..." << endl;
 			}
 
@@ -120,7 +126,7 @@ namespace Krane {
 		}
 
 		uint32_t alphaverts;
-		io.read_integer(in, alphaverts);
+		io->read_integer(in, alphaverts);
 		if(alphaverts != effective_alphaverts) {
 			throw(KToolsError("Corrupted build file (VB count mismatch)."));
 		}
@@ -129,7 +135,7 @@ namespace Krane {
 			cout << "Post-processing animation symbols..." << endl;
 		}
 		for(symbol_iter it = symbols.begin(); it != symbols.end(); ++it) {
-			if(verbosity >= 2) {
+			if(verbosity >= 4) {
 				cout << "\tPost-processing symbol 0x" << hex << it->first << dec << "..." << endl;
 			}
 			if(!it->second.loadPost(in, verbosity)) {
@@ -138,18 +144,18 @@ namespace Krane {
 		}
 
 		if(verbosity >= 1) {
-			cout << "Loading animation symbol hash table..." << endl;
+			cout << "Loading build hash table..." << endl;
 		}
 		if(!in || in.peek() == EOF) {
 			throw(KToolsError("Missing hash table at the end of the build file."));
 		}
 		uint32_t hashcollection_sz;
-		io.read_integer(in, hashcollection_sz);
+		io->read_integer(in, hashcollection_sz);
 
 		uint32_t num_namedsymbols = 0;
 		for(uint32_t i = 0; i < hashcollection_sz; i++) {
 			hash_t h;
-			io.read_integer(in, h);
+			io->read_integer(in, h);
 
 			Symbol* symb = NULL;
 			{
@@ -161,7 +167,7 @@ namespace Krane {
 
 			uint32_t symb_namelen;
 			char* raw_symbname;
-			io.read_integer(in, symb_namelen);
+			io->read_integer(in, symb_namelen);
 			raw_symbname = new char[symb_namelen];
 			in.read(raw_symbname, symb_namelen);
 			if(symb != NULL) {
@@ -176,7 +182,7 @@ namespace Krane {
 		}
 		if(num_namedsymbols != numsymbols) {
 			if(num_namedsymbols < numsymbols) {
-				throw(KToolsError("Incomplete hash table at the end of the build file."));
+				throw(KToolsError("Incomplete build hash table (missing symbol name)."));
 			}
 			else {
 				throw(logic_error("Uncaught hash collision."));
@@ -200,16 +206,16 @@ namespace Krane {
 		frames.resize(numframes);
 
 		if(verbosity >= 2) {
-			cout << "\tReading frames..." << endl;
+			cout << "\tReading symbol frames..." << endl;
 		}
 		for(uint32_t i = 0; i < numframes; i++) {
 			if(verbosity >= 3) {
-				cout << "\t\tReading frame at position #" << (i + 1) << "..." << endl;
+				cout << "\t\tReading symbol frame at position #" << (i + 1) << "..." << endl;
 			}
 			Frame& f = frames[i];
 			f.setParent(this);
 			if(!f.loadPre(in, verbosity)) {
-				throw(KToolsError("Failed to load animation frame."));
+				throw(KToolsError("Failed to load symbol frame."));
 			}
 		}
 
@@ -226,10 +232,13 @@ namespace Krane {
 		io->read_integer(in, framenum);
 		io->read_integer(in, duration);
 
-		io->read_float(in, x);
-		io->read_float(in, y);
-		io->read_float(in, w);
-		io->read_float(in, h);
+		float _x, _y, _w, _h;
+		io->read_float(in, _x);
+		io->read_float(in, _y);
+		io->read_float(in, _w);
+		io->read_float(in, _h);
+
+		bbox.setDimensions(_x, _y, _w, _h);
 
 		uint32_t alphaidx;
 		io->read_float(in, alphaidx);
@@ -249,10 +258,10 @@ namespace Krane {
 
 		for(size_t i = 0; i < numframes; i++) {
 			if(verbosity >= 3) {
-				cout << "\t\tPost-processing frame at position #" << (i + 1) << "..." << endl;
+				cout << "\t\tPost-processing symbol frame at position #" << (i + 1) << "..." << endl;
 			}
 			if(!frames[i].loadPost(in, verbosity)) {
-				throw(KToolsError("Failed to post-process animation frame."));
+				throw(KToolsError("Failed to post-process animation symbol frame."));
 			}
 		}
 

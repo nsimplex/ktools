@@ -25,67 +25,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 namespace Krane {
-	class KBuild : public NonCopyable {
+	class KBuildFile;
+
+	class KBuild : public NestedSerializer<KBuildFile> {
+		friend class KBuildFile;
 	public:
-		typedef float float_type;
+		typedef computations_float_type float_type;
 
-		static const uint32_t MAGIC_NUMBER;
-
-		static const int32_t MIN_VERSION;
-		static const int32_t MAX_VERSION;
-
-		BinIOHelper io;
-
-	private:
-		int32_t version;
-		std::string name;
-
-	public:
-		class Symbol {
+		class Symbol : public NestedSerializer<KBuild> {
 			friend class KBuild;
-
-			const KBuild* parent;
-			const BinIOHelper* io;
-
-			std::string name;
-			hash_t hash;
-
-			void setParent(const KBuild* p) {
-				parent = p;
-				if(p != NULL) {
-					io = &(p->io);
-				}
-			}
-
-			void setHash(hash_t h) {
-				hash = h;
-			}
-
 		public:
-			class Frame {
+			class Frame : public NestedSerializer<Symbol> {
 				friend class Symbol;
 				friend class KBuild;
 
 				typedef Triangle<float_type> triangle_type;
-
-				const Symbol* parent;
-				const BinIOHelper* io;
+				typedef BoundingBox<float_type> bbox_type;
 
 				uint32_t framenum;
 				uint32_t duration;
 
-				float x, y;
-				float w, h;
+				bbox_type bbox;
 
 				std::vector<triangle_type> xyztriangles;
 				std::vector<triangle_type> uvwtriangles;
-
-				void setParent(const Symbol* p) {
-					parent = p;
-					if(p != NULL) {
-						io = p->io;
-					}
-				}
 
 				void setAlphaVertCount(uint32_t n) {
 					const uint32_t trigs = n/3;
@@ -115,14 +78,17 @@ namespace Krane {
 
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, int verbosity);
-
-				Frame(const Symbol* p = NULL) {
-					setParent(p);
-				}
 			};
 
 		private:
+			std::string name;
+			hash_t hash;
+
 			std::vector<Frame> frames;
+
+			void setHash(hash_t h) {
+				hash = h;
+			}
 
 		public:
 			bool operator<(const Symbol& s) const {
@@ -158,44 +124,17 @@ namespace Krane {
 
 			std::istream& loadPre(std::istream& in, int verbosity);
 			std::istream& loadPost(std::istream& in, int verbosity);
-
-			Symbol(const KBuild* p = NULL) {
-				setParent(p);
-			}
 		};
 
 	private:
+		std::string name;
+
 		std::vector<std::string> atlasnames;
 
 		typedef std::map<hash_t, Symbol> symbolmap_t;
 		symbolmap_t symbols;
 
 	public:
-		static bool checkVersion(int32_t v) {
-			return MIN_VERSION <= v && v <= MAX_VERSION;
-		}
-
-		bool checkVersion() const {
-			return checkVersion(version);
-		}
-
-		void versionWarn() const {
-			if(!checkVersion()) {
-				std::cerr << "WARNING: build has unsupported encoding version " << version << "." << std::endl;
-			}
-		}
-
-		void versionRequire() const {
-			if(!checkVersion()) {
-				std::cerr << "Build has unsupported encoding version " << version << "." << std::endl;
-				throw(KToolsError("ERROR: build has unsupported encoding version."));
-			}
-		}
-
-		int32_t getVersion() const {
-			return version;
-		}
-
 		const std::string& getName() const {
 			return name;
 		}
@@ -233,9 +172,46 @@ namespace Krane {
 		}
 
 		std::istream& load(std::istream& in, int verbosity);
+	};
+
+
+	class KBuildFile : public NonCopyable {
+	public:
+		static const uint32_t MAGIC_NUMBER;
+
+		static const int32_t MIN_VERSION;
+		static const int32_t MAX_VERSION;
+
+	private:
+		int32_t version;
+
+	public:
+		BinIOHelper io;
+		KBuild build;
+
+		static bool checkVersion(int32_t v) {
+			return MIN_VERSION <= v && v <= MAX_VERSION;
+		}
+
+		bool checkVersion() const {
+			return checkVersion(version);
+		}
+
+		void versionRequire() const {
+			if(!checkVersion()) {
+				std::cerr << "Build has unsupported encoding version " << version << "." << std::endl;
+				throw(KToolsError("Build has unsupported encoding version."));
+			}
+		}
+
+		int32_t getVersion() const {
+			return version;
+		}
+
+		std::istream& load(std::istream& in, int verbosity);
 		void loadFrom(const std::string& path, int verbosity);
 
-		KBuild() : version(MAX_VERSION) {}
+		KBuildFile() : version(MAX_VERSION) {}
 	};
 }
 

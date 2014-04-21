@@ -142,6 +142,7 @@ namespace KTools {
 			for(size_t i = 0; i < n; i++) {
 				(*this)[i][i] = diag;
 			}
+			return *this;
 		}
 
 		SquareMatrix() : super() {
@@ -460,6 +461,14 @@ namespace KTools {
 
 		int int_h() const {
 			return dim_to_int(h());
+		}
+
+		void setDimensions(T _x, T _y, T _w, T _h) {
+			bottom_left[0] = _x;
+			bottom_left[1] = _y;
+			top_right[0] = _x + _w;
+			top_right[1] = _y + _h;
+			initialized = true;
 		}
 
 		void addPoint(T u, T v) {

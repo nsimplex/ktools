@@ -20,12 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KRANE_BASIC_HPP
 
 #include "ktools_common.hpp"
+#include "binary_io_utils.hpp"
 
 namespace Krane {
 	using namespace KTools;
 
 	typedef uint32_t hash_t;
 	typedef int32_t signed_hash_t;
+
+	typedef std::map<hash_t, std::string> hashtable_t;
+
+	typedef float computations_float_type;
 
 	inline hash_t strhash(const std::string& str) {
 		const size_t len = str.length();
@@ -36,6 +41,32 @@ namespace Krane {
 		}
 		return *reinterpret_cast<hash_t*>(&h);
 	}
+
+	inline const BinIOHelper* topointer_binio(const BinIOHelper* io) {
+		return io;
+	}
+	inline const BinIOHelper* topointer_binio(const BinIOHelper& io) {
+		return &io;
+	}
+
+	template<class Outer>
+	class NestedSerializer {
+	public:
+		const Outer* parent;
+		const BinIOHelper* io;
+
+		void setParent(const Outer* p) {
+			parent = p;
+			if(p == NULL) {
+				io = NULL;
+			}
+			else {
+				io = topointer_binio(p->io);
+			}
+		}
+
+		NestedSerializer() : parent(NULL), io(NULL) {}
+	};
 }
 
 #endif

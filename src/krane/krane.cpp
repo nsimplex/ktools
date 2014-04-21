@@ -5,16 +5,22 @@ using namespace std;
 
 
 int main(int argc, char* argv[]) {
-	string bildname = argc > 1 ? argv[1] : "";
+	string myarg = argc > 1 ? argv[1] : "";
 
-	if(bildname != "build.bin") {
-		cerr << "Give me a build.bin!" << endl;
-		exit(1);
-	}
-	
+
 	try {
-		KBuild bild;
-		bild.loadFrom(bildname, 4);
+		if(myarg == "build.bin") {
+			KBuildFile bild;
+			bild.loadFrom(myarg, 3);
+		}
+		else if(myarg == "anim.bin") {
+			KAnimFile<> anim;
+			anim.loadFrom(myarg, 2);
+		}
+		else {
+			cerr << "Give me a build.bin or anim.bin!" << endl;
+			exit(1);
+		}
 	}
 	catch(exception& e) {
 		cerr << e.what() << endl;
