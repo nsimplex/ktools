@@ -366,7 +366,7 @@ Magick::Image KTools::KTEX::File::DecompressMipmap(const KTools::KTEX::File::Mip
 		if(verbosity >= 0) {
 				std::cout << "Decompressing " << width << "x" << height << " KTEX image into RGBA..." << std::endl;
 		}
-		squish::u8* rgba = new squish::u8[4*width*height];
+		squish::u8* RESTRICT rgba = new squish::u8[4*width*height];
 		squish::DecompressImage(rgba, width, height, M.getData(), fmt.squish_flags);
 		B.updateNoCopy(rgba, 4*width*height);
 		img.read(B, Magick::Geometry(width, height), 8, "RGBA");

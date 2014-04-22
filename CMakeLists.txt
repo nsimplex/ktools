@@ -117,6 +117,18 @@ set(CMAKE_EXTRA_INCLUDE_FILES "sys/stat.h")
 CHECK_TYPE_SIZE("mode_t" MODE_T)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 #
+CHECK_CXX_SOURCE_COMPILES (
+  "int test (void *restrict x); int main (void) {return 0;}"
+	HAVE_RESTRICT) 
+#
+CHECK_C_SOURCE_COMPILES (
+  "int test (void *__restrict x); int main (void) {return 0;}"
+	HAVE_UURESTRICT) 
+#
+CHECK_C_SOURCE_COMPILES (
+  "int test (void *__restrict__ x); int main (void) {return 0;}"
+	HAVE_UURESTRICTUU) 
+#
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
 

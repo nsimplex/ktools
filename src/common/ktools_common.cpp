@@ -22,7 +22,7 @@ int snprintf(char *str, size_t n, const char *fmt, ...) {
 
 namespace KTools {
 	int strformat(std::string& s, const char *fmt, ...) {
-		char buffer[4096];
+		char buffer[1 << 15];
 
 		va_list ap;
 		va_start(ap, fmt);
@@ -36,5 +36,22 @@ namespace KTools {
 		}
 
 		return ret;
+	}
+
+	const char * DataFormatter::operator()(const char * fmt, ...) {
+		va_list ap;
+		va_start(ap, fmt);
+
+		const int ret = vsnprintf(buffer, sizeof(buffer) - 1, fmt, ap);
+
+		va_end(ap);
+
+		if(ret >= 0) {
+			return buffer;
+		}
+		else {
+			throw Error("Failed to format string.");
+			return NULL;
+		}
 	}
 }

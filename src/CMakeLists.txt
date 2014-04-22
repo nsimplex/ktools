@@ -14,11 +14,14 @@ set( local_ktech_HEADERS
 set( local_krane_SOURCES
 	krane/krane.cpp
 	krane/kbuild.cpp krane/kanim.cpp
+	krane/kbuild_serialize.cpp krane/kanim_serialize.cpp
+	krane/scml.cpp
 )
 
 set( local_krane_HEADERS
 	krane/krane.hpp krane/krane_common.hpp
 	krane/kbuild.hpp krane/kanim.hpp
+	krane/scml.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp

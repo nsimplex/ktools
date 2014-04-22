@@ -76,7 +76,7 @@ namespace KTools { namespace ImOp {
 
 	class premultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		void operator()(Magick::PixelPacket *p) const {
+		void operator()(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
 			double a = 1 - double(p->opacity)/MaxRGB;
@@ -91,7 +91,7 @@ namespace KTools { namespace ImOp {
 
 	class demultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		void operator()(Magick::PixelPacket *p) const {
+		void operator()(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
 			const double a = 1 - double(p->opacity)/MaxRGB;
@@ -117,11 +117,13 @@ namespace KTools { namespace ImOp {
 			Pixels view(img);
 
 			const size_t w = img.columns(), h = img.rows();
-			PixelPacket *p = view.get(0, 0, w, h);
+			{
+				PixelPacket * RESTRICT p = view.get(0, 0, w, h);
 
-			for(size_t i = 0; i < h; i++) {
-				for(size_t j = 0; j < w; j++) {
-					op(p++);
+				for(size_t i = 0; i < h; i++) {
+					for(size_t j = 0; j < w; j++) {
+						op(p++);
+					}
 				}
 			}
 

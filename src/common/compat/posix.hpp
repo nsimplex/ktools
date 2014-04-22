@@ -18,6 +18,10 @@ extern "C" {
 #	include <io.h>
 #endif
 
+#ifdef _MSC_VER
+#	include <strsafe.h>
+#endif
+
 #include <cstdio>
 
 #ifdef _MSC_VER

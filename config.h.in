@@ -32,6 +32,10 @@
 
 #cmakedefine HAVE_MODE_T
 
+#cmakedefine HAVE_RESTRICT
+#cmakedefine HAVE_UURESTRICT
+#cmakedefine HAVE_UURESTRICTUU
+
 /* Define to the full name of this package. */
 #cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"
 

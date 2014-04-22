@@ -28,7 +28,7 @@ namespace Krane {
 
 	class KAnim;
 
-	template<template<typename T, typename A> class Container = std::list, typename Alloc = std::allocator<KAnim> >
+	template<template<typename T, typename A> class Container = std::list, typename Alloc = std::allocator<KAnim*> >
 	class KAnimFile;
 
 	class KAnim : public NestedSerializer<GenericKAnimFile> {
@@ -123,7 +123,6 @@ namespace Krane {
 				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
 			};
 
-		private:
 			typedef std::map<hash_t, Event> eventmap_t;
 			eventmap_t events;
 
@@ -132,7 +131,6 @@ namespace Krane {
 
 			bbox_type bbox;
 
-		public:
 			uint32_t countEvents() const {
 				return uint32_t(events.size());
 			}
@@ -156,15 +154,24 @@ namespace Krane {
 		uint8_t facing_byte;
 		float frame_rate;
 
+	public:
 		framelist_t frames;
 
-	public:
 		const std::string& getName() const {
 			return name;
 		}
 
+		const std::string& getFullName() const {
+			// TODO: implement this
+			return getName();
+		}
+
 		void setName(const std::string& s) {
 			name = s;
+		}
+
+		hash_t getBankHash() const {
+			return bank_hash;
 		}
 
 		const std::string& getBank() const {
@@ -197,7 +204,62 @@ namespace Krane {
 
 		std::istream& loadPre(std::istream& in, int verbosity);
 		std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
+
+		virtual ~KAnim() {}
 	};
+
+
+	/*
+	 * Maps anim names to anims.
+	 * Owns the pointers.
+	 */
+	class KAnimBank : public std::map<std::string, KAnim*>, NonCopyable {
+		typedef std::map<std::string, KAnim*> super;
+
+		hash_t hash;
+		std::string name;
+
+	public:
+		hash_t getHash() const {
+			return hash;
+		}
+
+		const std::string& getName() const {
+			return name;
+		}
+
+		void setName(const std::string& _name) {
+			name = _name;
+			hash = strhash(_name);
+		}
+
+		void addAnim(KAnim* A) {
+			if(A->getBankHash() != hash) {
+				throw std::logic_error("Attempt to add an anim to the wrong bank.");
+			}
+			iterator match = find(A->getName());
+			if(match != end()) {
+				throw KToolsError("Duplicate anim '" + match->first + "' in bank '" + name + "'");
+			}
+			insert( std::make_pair(A->getName(), A) );
+		}
+
+		void clear() {
+			for(iterator it = begin(); it != end(); ++it) {
+				if(it->second != NULL) {
+					delete it->second;
+				}
+			}
+			super::clear();
+		}
+
+		KAnimBank() : super(), hash(), name() {}
+
+		virtual ~KAnimBank() {
+			clear();
+		}
+	};
+
 
 
 	class GenericKAnimFile : public NonCopyable {
@@ -245,41 +307,45 @@ namespace Krane {
 	template<template<typename T, typename A> class Container, typename Alloc>
 	class KAnimFile : public GenericKAnimFile {
 	public:
-		typedef Container<KAnim, Alloc> animcontainer_t;
+		typedef Container<KAnim*, Alloc> animcontainer_t;
 		typedef typename animcontainer_t::iterator anim_iterator;
 		typedef typename animcontainer_t::const_iterator anim_const_iterator;
+
 		animcontainer_t anims;
 
 		virtual uint32_t countEvents() const {
 			uint32_t n = 0;
 			for(anim_const_iterator it = anims.begin(); it != anims.end(); ++it) {
-				n += it->countEvents();
+				n += (*it)->countEvents();
 			}
 			return n;
 		}
 		virtual uint32_t countFrames() const {
 			uint32_t n = 0;
 			for(anim_const_iterator it = anims.begin(); it != anims.end(); ++it) {
-				n += it->countFrames();
+				n += (*it)->countFrames();
 			}
 			return n;
 		}
 		virtual uint32_t countElements() const {
 			uint32_t n = 0;
 			for(anim_const_iterator it = anims.begin(); it != anims.end(); ++it) {
-				n += it->countElements();
+				n += (*it)->countElements();
 			}
 			return n;
 		}
 
 		virtual void setAnimCount(uint32_t n) {
+			clear();
 			anims.resize(n);
 		}
 
+
 		virtual std::istream& loadPre_all_anims(std::istream& in, int verbosity) {
 			for(anim_iterator it = anims.begin(); it != anims.end(); ++it) {
-				it->setParent(this);
-				if(!it->loadPre(in, verbosity)) {
+				*it = new KAnim;
+				(*it)->setParent(this);
+				if(!(*it)->loadPre(in, verbosity)) {
 					throw(KToolsError("Failed to load animation."));
 				}
 			}
@@ -288,12 +354,173 @@ namespace Krane {
 
 		virtual std::istream& loadPost_all_anims(std::istream& in, const hashtable_t& ht, int verbosity) {
 			for(anim_iterator it = anims.begin(); it != anims.end(); ++it) {
-				if(!it->loadPost(in, ht, verbosity)) {
+				if(!(*it)->loadPost(in, ht, verbosity)) {
 					throw(KToolsError("Failed to load animation."));
 				}
 			}
 			return in;
 		}
+
+
+		void clear() {
+			for(anim_iterator it = anims.begin(); it != anims.end(); ++it) {
+				if(*it != NULL) {
+					delete *it;
+				}
+			}
+			anims.clear();
+		}
+
+		operator bool() const {
+			return !anims.empty();
+		}
+
+		virtual ~KAnimFile() {
+			clear();
+		}
+	};
+
+
+	class KAnimSelector : public std::unary_function<const KAnim&, bool> {
+	public:
+		virtual bool select(const KAnim& A) {
+			(void)A;
+			return true;
+		}
+
+		bool operator()(const KAnim& A) {
+			return select(A);
+		}
+
+		virtual ~KAnimSelector() {}
+	};
+
+	// Subclass which may be used on anims which just metadata
+	// (i.e., before any frame was loaded)
+	class KAnimMetadataSelector : public KAnimSelector {};
+
+	class BankKAnimSelector : public KAnimSelector {
+		std::set<hash_t> bank_set;
+
+	public:
+		void addBank(const std::string& name) {
+			bank_set.insert( strhash(name) );
+		}
+
+		virtual bool select(const KAnim& A) {
+			return bank_set.count(A.getBankHash()) > 0;
+		}
+	};
+
+	/*
+	// Owns the selector pointer.
+	class KAnimFilter : public NonCopyable {
+		KAnimSelector* s;
+
+	public:
+		void clear() {
+			if(s != NULL) {
+				delete s;
+				s = NULL;
+			}
+		}
+
+		void setSelector(KAnimSelector* _s) {
+			clear();
+			s = _s;
+		}
+
+		template<typename Container>
+		void operator()(Container& C) {
+			if(s == NULL) return;
+			for(Container::iterator it = C.begin(); it != C.end();) {
+				if((*s)(*it)) {
+					++it;
+				}
+				else {
+					C.erase(it++);
+				}
+			}
+		}
+
+		KAnimFilter() : s(NULL) {}
+		~KAnimFilter() {
+			clear();
+		}
+	};
+	*/
+
+	/*
+	 * Maps a bank hash to a bank pointer.
+	 * Owns the pointers.
+	 * Owns the selector pointer.
+	 */
+	class KAnimBankCollection : public std::map<hash_t, KAnimBank*>, NonCopyable {
+		typedef std::map<hash_t, KAnimBank*> super;
+
+		KAnimSelector* s;
+
+	public:
+		void setSelector(KAnimSelector* _s) {
+			clear();
+			s = _s;
+		}
+
+		void clearBanks() {
+			for(iterator it = begin(); it != end(); ++it) {
+				if(it->second != NULL) {
+					delete it->second;
+				}
+			}
+		}
+
+		void clearSelector() {
+			if(s != NULL) {
+				delete s;
+				s = NULL;
+			}
+		}
+
+		void clear() {
+			clearBanks();
+			clearSelector();
+			super::clear();
+		}
+
+		// Now owns the anim.
+		void addAnim(KAnim*& A) {
+			using namespace std;
+			cout << "Adding anim " << A << endl;
+			if(!(s == NULL || (*s)(*A))) {
+				delete A;
+				A = NULL;
+				return;
+			}
+
+			KAnimBank* B;
+
+			iterator match = find(A->getBankHash());
+			if(match == end()) {
+				B = new KAnimBank;
+				B->setName( A->getBank() );
+				insert( std::make_pair(A->getBankHash(), B) );
+			}
+			else {
+				B = match->second;
+			}
+
+			B->addAnim(A);
+		}
+
+		// Now owns all the anims in the range.
+		template<typename Iterator>
+		void addAnims(Iterator first, Iterator last) {
+			while(first != last) {
+				addAnim(*first++);
+			}
+		}
+
+		KAnimBankCollection() : s(NULL) {}
 	};
 }
 

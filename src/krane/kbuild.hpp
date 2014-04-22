@@ -39,14 +39,11 @@ namespace Krane {
 				friend class Symbol;
 				friend class KBuild;
 
+			public:
 				typedef Triangle<float_type> triangle_type;
 				typedef BoundingBox<float_type> bbox_type;
 
-				uint32_t framenum;
-				uint32_t duration;
-
-				bbox_type bbox;
-
+			private:
 				std::vector<triangle_type> xyztriangles;
 				std::vector<triangle_type> uvwtriangles;
 
@@ -75,6 +72,14 @@ namespace Krane {
 				}
 
 			public:
+				uint32_t framenum;
+				uint32_t duration;
+
+				/*
+				 * Corresponds to the x, y, w and h values of the xml.
+				 */
+				bbox_type bbox;
+
 				/*
 				 * Bounding box of the corresponding atlas region, in UV coordinates.
 				 */
@@ -95,69 +100,7 @@ namespace Krane {
 					return 3*countTriangles();
 				}
 
-				Magick::Image getImage() const {
-					using namespace Magick;
-					using namespace std;
-
-					// Bounding quad.
-					Image quad;
-					// Size of the atlas.
-					float_type w0, h0;
-					bbox_type::vector_type offset;
-					{
-						Image atlas = parent->parent->getFrontAtlas();
-						Geometry cropgeo = atlas.size();
-
-						w0 = cropgeo.width();
-						h0 = cropgeo.height();
-
-						offset[0] = w0*atlas_bbox.x();
-						offset[1] = h0*(1 - atlas_bbox.ymax());
-
-						cropgeo.xOff(size_t( floor(offset[0]) ));
-						cropgeo.yOff(size_t( floor(offset[1]) ));
-						cropgeo.width(size_t( floor(w0*atlas_bbox.w()) ));
-						cropgeo.height(size_t( floor(h0*atlas_bbox.h()) ));
-
-						quad = atlas;
-						quad.crop(cropgeo);
-					}
-
-
-					Geometry geo = quad.size();
-
-					// Returned image (clipped quad).
-					Image img = Image(geo, "transparent");
-
-					// Clip mask.
-					Image mask(geo, Color("white"));
-					mask.fillColor("black");
-
-					list<Drawable> drawable_trigs;
-
-					size_t ntrigs = uvwtriangles.size();
-					for(size_t i = 0; i < ntrigs; i++) {
-						triangle_type trig = uvwtriangles[i];
-
-						list<Coordinate> coords;
-
-						coords.push_back( Coordinate(trig.a[0]*w0 - offset[0], (1 - trig.a[1])*h0 - offset[1]) );
-						coords.push_back( Coordinate(trig.b[0]*w0 - offset[0], (1 - trig.b[1])*h0 - offset[1]) );
-						coords.push_back( Coordinate(trig.c[0]*w0 - offset[0], (1 - trig.c[1])*h0 - offset[1]) );
-
-						drawable_trigs.push_back( DrawablePolygon(coords) );
-					}
-
-					mask.draw(drawable_trigs);
-
-					img.clipMask(mask);
-
-					img.composite( quad, Geometry(0, 0), OverCompositeOp );
-
-					img.magick("RGBA");
-
-					return img;
-				}
+				Magick::Image getImage() const;
 
 				void getName(std::string& s) const {
 					std::string parent_name;
@@ -178,11 +121,28 @@ namespace Krane {
 					getName(suffix);
 
 					p /= suffix;
+					p += ".png";
 				}
 
 				Compat::Path getPath() const {
 					Compat::Path p;
 					getPath(p);
+					return p;
+				}
+
+				void getUnixPath(Compat::UnixPath& p) const {
+					parent->getUnixPath(p);
+				
+					Compat::UnixPath suffix;
+					getName(suffix);
+
+					p /= suffix;
+					p += ".png";
+				}
+
+				Compat::UnixPath getUnixPath() const {
+					Compat::UnixPath p;
+					getUnixPath(p);
 					return p;
 				}
 
@@ -200,6 +160,9 @@ namespace Krane {
 
 		public:
 			typedef std::vector<Frame> framelist_t;
+			typedef framelist_t::iterator frame_iterator;
+			typedef framelist_t::const_iterator frame_const_iterator;
+
 			framelist_t frames;
 
 			bool operator<(const Symbol& s) const {
@@ -232,6 +195,16 @@ namespace Krane {
 				return p;
 			}
 
+			void getUnixPath(Compat::UnixPath& p) const {
+				p.assign(getName());
+			}
+
+			Compat::UnixPath getUnixPath() const {
+				Compat::UnixPath p;
+				getUnixPath(p);
+				return p;
+			}
+
 			operator const std::string&() const {
 				return name;
 			}
@@ -253,15 +226,20 @@ namespace Krane {
 
 		typedef Magick::Image atlas_t;
 
+		typedef Symbol::frame_iterator frame_iterator;
+		typedef Symbol::frame_const_iterator frame_const_iterator;
+
 	private:
 		std::string name;
 
 		std::vector<std::string> atlasnames;
 		std::vector<atlas_t> atlases;
 
-		typedef std::map<hash_t, Symbol> symbolmap_t;
-
 	public:
+		typedef std::map<hash_t, Symbol> symbolmap_t;
+		typedef symbolmap_t::iterator symbolmap_iterator;
+		typedef symbolmap_t::const_iterator symbolmap_const_iterator;
+
 		symbolmap_t symbols;
 
 
@@ -354,7 +332,7 @@ namespace Krane {
 
 	private:
 		int32_t version;
-		KBuild build;
+		KBuild* build;
 
 	public:
 		BinIOHelper io;
@@ -378,18 +356,22 @@ namespace Krane {
 			return version;
 		}
 
-		KBuild& getBuild() {
+		KBuild* getBuild() {
 			return build;
 		}
 
-		const KBuild& getBuild() const {
+		const KBuild* getBuild() const {
 			return build;
 		}
 
 		std::istream& load(std::istream& in, int verbosity);
 		void loadFrom(const std::string& path, int verbosity);
 
-		KBuildFile() : version(MAX_VERSION) {}
+		operator bool() const {
+			return build != NULL;
+		}
+
+		KBuildFile() : version(MAX_VERSION), build(NULL) {}
 	};
 }
 

@@ -16,12 +16,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KRANE_HPP
-#define KRANE_HPP
+#ifndef KRANE_SCML_HPP
+#define KRANE_SCML_HPP
 
 #include "krane_common.hpp"
 #include "kbuild.hpp"
 #include "kanim.hpp"
-#include "scml.hpp"
+
+namespace Krane {
+	void exportToSCML(std::ostream& out, const KBuild& bild, const KAnimBankCollection& banks);
+}
 
 #endif

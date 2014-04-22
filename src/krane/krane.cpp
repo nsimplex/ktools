@@ -15,6 +15,7 @@ Magick::Image load_image(const Compat::Path& path) {
 		return ktex.Decompress();
 	}
 	else {
+		// TODO: catch magick warnings.
 		Magick::Image img(path);
 		return img;
 	}
@@ -43,12 +44,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		KBuildFile bildfile;
-		bildfile.loadFrom(bildpath, 0);
+		bildfile.loadFrom(bildpath, 1);
 
 		KAnimFile<> animfile;
-		animfile.loadFrom(animpath, 0);
+		animfile.loadFrom(animpath, 1);
 
-		KBuild& bild = bildfile.getBuild();
+		KBuild& bild = *bildfile.getBuild();
 
 		string atlasname = bild.getFrontAtlasName();
 		Compat::Path atlaspath = inputdir/atlasname;
@@ -63,12 +64,27 @@ int main(int argc, char* argv[]) {
 		for(imglist_t::iterator it = imglist.begin(); it != imglist.end(); ++it) {
 			cout << it->first << endl;
 
-			Compat::Path outpath = outputdir/it->first + ".png";
+			Compat::Path outpath = outputdir/it->first;
 
-			outpath.dirname().mkdir();
+			if(!outpath.dirname().mkdir()) {
+				throw Error("failed to create dir.");
+			}
 
 			it->second.write(outpath);
 		}
+
+		cout << "Splitting banks..." << endl;
+
+		KAnimBankCollection banks;
+		banks.addAnims( animfile.anims.begin(), animfile.anims.end() );
+		animfile.anims.clear();
+
+		cout << "Writing scml..." << endl;
+		ofstream scml((outputdir/bild.getName() + ".scml").c_str());
+		if(!scml) {
+			throw Error("failed to open output scml file.");
+		}
+		exportToSCML(scml, bild, banks);
 	}
 	catch(exception& e) {
 		cerr << e.what() << endl;

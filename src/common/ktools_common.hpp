@@ -61,6 +61,18 @@ extern "C" {
 int snprintf(char *str, size_t n, const char *fmt, ...);
 #endif
 
+#ifndef RESTRICT
+#	if defined(HAVE_RESTRICT)
+#		define RESTRICT restrict
+#	elif defined(HAVE_UURESTRICT)
+#		define RESTRICT __restrict
+#	elif defined(HAVE_UURESTRICTUU)
+#		define RESTRICT __restrict__
+#	else
+#		define RESTRICT
+#	endif
+#endif
+
 namespace KTools {
 	enum ExitStatus {
 		MagickErrorCode = 1,
@@ -172,6 +184,17 @@ namespace KTools {
 	}
 
 	int strformat(std::string& s, const char* fmt, ...);
+
+	/*
+	 * Each call destroys the validity of the last return.
+	 * (the buffer is reused)
+	 */
+	class DataFormatter {
+		char buffer[1 << 15];
+
+	public:
+		const char * operator()(const char * fmt, ...);
+	};
 }
 
 #endif

@@ -32,15 +32,17 @@ namespace Compat {
 #	error "The POSIX macro S_ISDIR is not defined."
 #endif
 
-	static const char DIRECTORY_SEPARATOR = DIR_SEP_MACRO;	
+	static const char NATIVE_DIRECTORY_SEPARATOR = DIR_SEP_MACRO;	
 
-	static const char DUAL_DIRECTORY_SEPARATOR = (DIRECTORY_SEPARATOR == '/' ? '\\' : '/');
+	static const char NATIVE_DUAL_DIRECTORY_SEPARATOR = (NATIVE_DIRECTORY_SEPARATOR == '/' ? '\\' : '/');
 
-	class Path : public std::string {
+	template<char sep>
+	class PathAbstraction : public std::string {
 	public:
-		typedef struct stat stat_t;
+		static const char SEPARATOR = sep;
+		static const char DUAL_SEPARATOR = (sep == '/' ? '\\' : '/');
 
-		static const char SEPARATOR = DIRECTORY_SEPARATOR;
+		typedef struct stat stat_t;
 
 		std::string& toString() {
 			return static_cast<std::string&>(*this);
@@ -51,10 +53,10 @@ namespace Compat {
 		}
 
 	private:
-		static void normalizeDirSeps(std::string& str, size_t offset = 0) {
+		void normalizeDirSeps(std::string& str) {
 			std::string::iterator _begin = str.begin();
-			std::advance(_begin, offset);
-			std::replace(_begin, str.end(), DUAL_DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR);
+			//std::advance(_begin, offset);
+			std::replace(_begin, str.end(), DUAL_SEPARATOR, SEPARATOR);
 		}
 
 		/*
@@ -73,8 +75,8 @@ namespace Compat {
 			end = begin;
 			std::advance(end, len - 1);
 
-			for(; begin != real_end && *begin == DIRECTORY_SEPARATOR; ++begin);
-			for(; end != begin && *end == DIRECTORY_SEPARATOR; --end);
+			for(; begin != real_end && *begin == SEPARATOR; ++begin);
+			for(; end != begin && *end == SEPARATOR; --end);
 			++end;
 		}
 
@@ -126,7 +128,7 @@ namespace Compat {
 		/*
 		 * Appends a string, preceded by a directory separator if necessary.
 		 */
-		Path& appendPath(std::string str) {
+		PathAbstraction& appendPath(std::string str) {
 			if(str.length() == 0)
 				return *this;
 
@@ -134,8 +136,8 @@ namespace Compat {
 
 			const size_t old_len = this->length();
 
-			if(old_len != 0 || str[0] == DIRECTORY_SEPARATOR) {
-				std::string::append(1, DIRECTORY_SEPARATOR);
+			if(old_len != 0 || str[0] == SEPARATOR) {
+				std::string::append(1, SEPARATOR);
 			}
 			std::string::const_iterator _begin, _end;
 			_begin = str.begin();
@@ -146,20 +148,20 @@ namespace Compat {
 			return *this;
 		}
 
-		Path& assignPath(const std::string& str) {
+		PathAbstraction& assignPath(const std::string& str) {
 			std::string::clear();
 			return appendPath(str);
 		}
 
-		Path& operator=(const std::string& str) {
+		PathAbstraction& operator=(const std::string& str) {
 			return assignPath(str);
 		}
 
-		Path& operator=(const char *str) {
+		PathAbstraction& operator=(const char *str) {
 			return assignPath(str);
 		}
 
-		Path& operator=(const Path& p) {
+		PathAbstraction& operator=(const PathAbstraction& p) {
 			std::string::assign(p);
 			return *this;
 		}
@@ -181,55 +183,55 @@ namespace Compat {
 			}
 		}
 
-		Path(const std::string& str) : std::string() {
+		PathAbstraction(const std::string& str) : std::string() {
 			*this = str;
 		}
 
-		Path(const char* str) : std::string() {
+		PathAbstraction(const char* str) : std::string() {
 			*this = str;
 		}
 
-		Path(const Path& p) : std::string() {
+		PathAbstraction(const PathAbstraction& p) : std::string() {
 			*this = p;
 		}
 
-		Path() {}
+		PathAbstraction() {}
 
-		Path copy() const {
-			return Path(*this);
+		PathAbstraction copy() const {
+			return PathAbstraction(*this);
 		}
 
-		Path& operator+=(const std::string& str) {
+		PathAbstraction& operator+=(const std::string& str) {
 			std::string::append(str);
 			return *this;
 		}
 
-		Path& operator+=(const char *str) {
+		PathAbstraction& operator+=(const char *str) {
 			std::string::append(str);
 			return *this;
 		}
 
-		Path operator+(const std::string& str) const {
+		PathAbstraction operator+(const std::string& str) const {
 			return this->copy() += str;
 		}
 
-		Path operator+(const char *str) const {
+		PathAbstraction operator+(const char *str) const {
 			return this->copy() += str;
 		}
 
-		Path& operator/=(const std::string& str) {
+		PathAbstraction& operator/=(const std::string& str) {
 			return appendPath(str);
 		}
 
-		Path& operator/=(const char *str) {
+		PathAbstraction& operator/=(const char *str) {
 			return appendPath(str);
 		}
 
-		Path operator/(const std::string& str) const {
+		PathAbstraction operator/(const std::string& str) const {
 			return this->copy() /= str;
 		}
 
-		Path operator/(const char *str) const {
+		PathAbstraction operator/(const char *str) const {
 			return this->copy() /= str;
 		}
 
@@ -245,7 +247,7 @@ namespace Compat {
 		void split(std::string& dir, std::string& base) const {
 			assert( length() > 0 );
 
-			const size_t last_sep = find_last_of(DIRECTORY_SEPARATOR);
+			const size_t last_sep = find_last_of(SEPARATOR);
 
 			if(last_sep == 0 && length() == 1) {
 				// Root directory (so Unix).
@@ -264,23 +266,23 @@ namespace Compat {
 			}
 		}
 
-		Path dirname() const {
-			Path dir, base;
+		PathAbstraction dirname() const {
+			PathAbstraction dir, base;
 			split(dir, base);
 			return dir;
 		}
 
 		// With trailing slash.
-		Path dirnameWithSlash() const {
-			Path p = dirname();
+		PathAbstraction dirnameWithSlash() const {
+			PathAbstraction p = dirname();
 			if(p != "/") {
-				p.append(1, DIRECTORY_SEPARATOR);
+				p.append(1, SEPARATOR);
 			}
 			return p;
 		}
 
-		Path basename() const {
-			Path dir, base;
+		PathAbstraction basename() const {
+			PathAbstraction dir, base;
 			split(dir, base);
 			return base;
 		}
@@ -305,7 +307,7 @@ namespace Compat {
 			}
 		}
 
-		Path& replaceExtension(const std::string& newext) {
+		PathAbstraction& replaceExtension(const std::string& newext) {
 			const size_t start = get_extension_position();
 			if(start == npos) {
 				std::string::append(1, '.');
@@ -317,7 +319,7 @@ namespace Compat {
 			return *this;
 		}
 
-		Path& removeExtension() {
+		PathAbstraction& removeExtension() {
 			const size_t start = get_extension_position();
 			if(start != npos) {
 				assert( start >= 1 );
@@ -331,15 +333,11 @@ namespace Compat {
 			return inner_stat(buf) == 0;
 		}
 
-		operator bool() const {
-			return exists();
-		}
-
 		/*
 		 * If p doesn't exist and *this does, returns true.
 		 * Likewise, if *this doesn't exist and p does, returns false.
 		 */
-		bool isNewerThan(const Path& p) const {
+		bool isNewerThan(const PathAbstraction& p) const {
 			stat_t mybuf, otherbuf;
 			stat(mybuf);
 			p.stat(otherbuf);
@@ -360,7 +358,7 @@ namespace Compat {
 			}
 		}
 
-		bool isOlderThan(const Path& p) const {
+		bool isOlderThan(const PathAbstraction& p) const {
 			return p.isNewerThan(*this);
 		}
 
@@ -383,6 +381,9 @@ namespace Compat {
 			return true;
 		}
 	};
+
+	typedef PathAbstraction<NATIVE_DIRECTORY_SEPARATOR> Path;
+	typedef PathAbstraction<'/'> UnixPath;
 }
 
 #endif
