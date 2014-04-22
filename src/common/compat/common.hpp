@@ -1,6 +1,8 @@
 #ifndef KTOOLS_COMPAT_COMMON_HPP
 #define KTOOLS_COMPAT_COMMON_HPP
 
+#include "config.h"
+
 #if defined(_WIN32) || defined(WIN32)
 #	define IS_WINDOWS 1
 #	define OS_STRING "windows"
@@ -16,6 +18,10 @@
 
 #if defined(IS_LINUX) || defined(IS_MAC)
 #	define IS_UNIX
+#endif
+
+#if !defined(HAVE_MODE_T)
+typedef int mode_t
 #endif
 
 #endif

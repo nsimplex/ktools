@@ -48,8 +48,13 @@ namespace Krane {
 			io.reorder(version);
 		}
 
+		if(verbosity >= 2) {
+			cout << "Got build version " << version << "." << endl;
+		}
+
 		versionRequire();
 
+		build.setParent(this);
 		build.load(in, verbosity);
 
 		return in;
@@ -84,6 +89,9 @@ namespace Krane {
 		}
 		uint32_t numatlases;
 		io->read_integer(in, numatlases);
+		if(numatlases == 0) {
+			throw(KToolsError("Build file has 0 atlases."));
+		}
 		atlasnames.resize(numatlases);
 		for(uint32_t i = 0; i < numatlases; i++) {
 			uint32_t atlasnamelen;
@@ -308,6 +316,8 @@ namespace Krane {
 			uvwtriangles[i].b = uvws[1];
 			uvwtriangles[i].c = uvws[2];
 		}
+
+		updateAtlasBoundingBox();
 
 		return in;
 	}

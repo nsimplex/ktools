@@ -56,7 +56,10 @@ extern "C" {
 
 #include <Magick++.h>
 
-#include <squish/squish.h>
+
+#ifndef HAVE_SNPRINTF
+int snprintf(char *str, size_t n, const char *fmt, ...);
+#endif
 
 namespace KTools {
 	enum ExitStatus {
@@ -102,7 +105,7 @@ namespace KTools {
 		U second;
 	};
 
-	static const class Nothing {} Nil;
+	static const class Nil {} nil;
 
 	template<typename T> class Maybe;
 
@@ -126,7 +129,7 @@ namespace KTools {
 		}
 
 		Maybe() : is_nothing(true) {}
-		Maybe(Nothing) : is_nothing(true) {}
+		Maybe(Nil) : is_nothing(true) {}
 		Maybe(const Maybe& m) { *this = m; }
 
 		template<typename U>
@@ -134,11 +137,11 @@ namespace KTools {
 			return is_nothing && m.is_nothing;
 		}
 
-		bool operator==(Nothing) const {
+		bool operator==(Nil) const {
 			return is_nothing;
 		}
 
-		friend bool operator==(Nothing, const Maybe& m) {
+		friend bool operator==(Nil, const Maybe& m) {
 			return m.is_nothing;
 		}
 
@@ -153,7 +156,7 @@ namespace KTools {
 
 		T value() const {
 			if(is_nothing) {
-				throw Error("Attempt to cast Nil to a value.");
+				throw Error("Attempt to cast nil to a value.");
 			}
 			return val;
 		}
@@ -167,6 +170,8 @@ namespace KTools {
 	inline Maybe<T> Just(T val) {
 		return Maybe<T>(val);
 	}
+
+	int strformat(std::string& s, const char* fmt, ...);
 }
 
 #endif

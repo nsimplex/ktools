@@ -56,6 +56,24 @@ namespace Krane {
 					uvwtriangles.resize(trigs);
 				}
 
+				/*
+				 * Updates the atlas bounding box based on the uvw triangles.
+				 */
+				void updateAtlasBoundingBox() {
+					atlas_bbox.reset();
+
+					size_t ntrigs = uvwtriangles.size();
+					for(size_t i = 0; i < ntrigs; i++) {
+						atlas_bbox.addPoints(uvwtriangles[i]);
+					}
+
+					cropAtlasBoundingBox();
+				}
+
+				void cropAtlasBoundingBox() {
+					atlas_bbox.intersect(bbox_type(0, 0, 1, 1));
+				}
+
 			public:
 				/*
 				 * Bounding box of the corresponding atlas region, in UV coordinates.
@@ -66,6 +84,7 @@ namespace Krane {
 					xyztriangles.push_back(xyz);
 					uvwtriangles.push_back(uvw);
 					atlas_bbox.addPoints(uvw);
+					cropAtlasBoundingBox();
 				}
 
 				uint32_t countTriangles() const {
@@ -76,6 +95,97 @@ namespace Krane {
 					return 3*countTriangles();
 				}
 
+				Magick::Image getImage() const {
+					using namespace Magick;
+					using namespace std;
+
+					// Bounding quad.
+					Image quad;
+					// Size of the atlas.
+					float_type w0, h0;
+					bbox_type::vector_type offset;
+					{
+						Image atlas = parent->parent->getFrontAtlas();
+						Geometry cropgeo = atlas.size();
+
+						w0 = cropgeo.width();
+						h0 = cropgeo.height();
+
+						offset[0] = w0*atlas_bbox.x();
+						offset[1] = h0*(1 - atlas_bbox.ymax());
+
+						cropgeo.xOff(size_t( floor(offset[0]) ));
+						cropgeo.yOff(size_t( floor(offset[1]) ));
+						cropgeo.width(size_t( floor(w0*atlas_bbox.w()) ));
+						cropgeo.height(size_t( floor(h0*atlas_bbox.h()) ));
+
+						quad = atlas;
+						quad.crop(cropgeo);
+					}
+
+
+					Geometry geo = quad.size();
+
+					// Returned image (clipped quad).
+					Image img = Image(geo, "transparent");
+
+					// Clip mask.
+					Image mask(geo, Color("white"));
+					mask.fillColor("black");
+
+					list<Drawable> drawable_trigs;
+
+					size_t ntrigs = uvwtriangles.size();
+					for(size_t i = 0; i < ntrigs; i++) {
+						triangle_type trig = uvwtriangles[i];
+
+						list<Coordinate> coords;
+
+						coords.push_back( Coordinate(trig.a[0]*w0 - offset[0], (1 - trig.a[1])*h0 - offset[1]) );
+						coords.push_back( Coordinate(trig.b[0]*w0 - offset[0], (1 - trig.b[1])*h0 - offset[1]) );
+						coords.push_back( Coordinate(trig.c[0]*w0 - offset[0], (1 - trig.c[1])*h0 - offset[1]) );
+
+						drawable_trigs.push_back( DrawablePolygon(coords) );
+					}
+
+					mask.draw(drawable_trigs);
+
+					img.clipMask(mask);
+
+					img.composite( quad, Geometry(0, 0), OverCompositeOp );
+
+					img.magick("RGBA");
+
+					return img;
+				}
+
+				void getName(std::string& s) const {
+					std::string parent_name;
+					parent->getName(parent_name);
+					strformat(s, "%s-%u", parent_name.c_str(), (unsigned int)framenum);
+				}
+
+				std::string getName() const {
+					std::string s;
+					getName(s);
+					return s;
+				}
+
+				void getPath(Compat::Path& p) const {
+					parent->getPath(p);
+				
+					Compat::Path suffix;
+					getName(suffix);
+
+					p /= suffix;
+				}
+
+				Compat::Path getPath() const {
+					Compat::Path p;
+					getPath(p);
+					return p;
+				}
+
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, int verbosity);
 			};
@@ -84,13 +194,14 @@ namespace Krane {
 			std::string name;
 			hash_t hash;
 
-			std::vector<Frame> frames;
-
 			void setHash(hash_t h) {
 				hash = h;
 			}
 
 		public:
+			typedef std::vector<Frame> framelist_t;
+			framelist_t frames;
+
 			bool operator<(const Symbol& s) const {
 				return hash < s.hash || (hash == s.hash && name < s.name);
 			}
@@ -103,8 +214,22 @@ namespace Krane {
 				return !(*this == s);
 			}
 
+			void getName(std::string& s) const {
+				s = name;
+			}
+
 			const std::string& getName() const {
 				return name;
+			}
+
+			void getPath(Compat::Path& p) const {
+				p.assign(getName());
+			}
+
+			Compat::Path getPath() const {
+				Compat::Path p;
+				getPath(p);
+				return p;
 			}
 
 			operator const std::string&() const {
@@ -126,21 +251,54 @@ namespace Krane {
 			std::istream& loadPost(std::istream& in, int verbosity);
 		};
 
+		typedef Magick::Image atlas_t;
+
 	private:
 		std::string name;
 
 		std::vector<std::string> atlasnames;
+		std::vector<atlas_t> atlases;
 
 		typedef std::map<hash_t, Symbol> symbolmap_t;
-		symbolmap_t symbols;
 
 	public:
+		symbolmap_t symbols;
+
+
 		const std::string& getName() const {
 			return name;
 		}
 
 		void setName(const std::string& s) {
 			name = s;
+		}
+
+		const std::string& getFrontAtlasName() const {
+			if(atlasnames.empty()) {
+				throw(std::logic_error("No atlases."));
+			}
+			return atlasnames[0];
+		}
+
+		atlas_t& getFrontAtlas() {
+			if(atlases.empty()) {
+				throw(std::logic_error("No atlases."));
+			}
+			return atlases[0];
+		}
+
+		const atlas_t& getFrontAtlas() const {
+			if(atlases.empty()) {
+				throw(std::logic_error("No atlases."));
+			}
+			return atlases[0];
+		}
+
+		void setFrontAtlas(const atlas_t& a) {
+			if(atlases.empty()) {
+				atlases.resize(1);
+			}
+			atlases[0] = a;
 		}
 
 		Symbol* getSymbol(hash_t h) {
@@ -171,6 +329,18 @@ namespace Krane {
 			return getSymbol(strhash(symname));
 		}
 
+		template<typename OutputIterator>
+		void getImages(OutputIterator it) const {
+			typedef symbolmap_t::const_iterator symbol_iter;
+			typedef Symbol::framelist_t::const_iterator frame_iter;
+
+			for(symbol_iter symit = symbols.begin(); symit != symbols.end(); ++symit) {
+				for(frame_iter frit = symit->second.frames.begin(); frit != symit->second.frames.end(); ++frit) {
+					*it++ = std::make_pair(frit->getPath(), frit->getImage());
+				}
+			}
+		}
+
 		std::istream& load(std::istream& in, int verbosity);
 	};
 
@@ -184,10 +354,10 @@ namespace Krane {
 
 	private:
 		int32_t version;
+		KBuild build;
 
 	public:
 		BinIOHelper io;
-		KBuild build;
 
 		static bool checkVersion(int32_t v) {
 			return MIN_VERSION <= v && v <= MAX_VERSION;
@@ -206,6 +376,14 @@ namespace Krane {
 
 		int32_t getVersion() const {
 			return version;
+		}
+
+		KBuild& getBuild() {
+			return build;
+		}
+
+		const KBuild& getBuild() const {
+			return build;
 		}
 
 		std::istream& load(std::istream& in, int verbosity);

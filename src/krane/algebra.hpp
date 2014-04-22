@@ -30,6 +30,7 @@ namespace KTools {
 
 	public:
 		typedef T value_type;
+		static const size_t dimension = N;
 
 		Vector() {
 			for(size_t i = 0; i < N; i++) {
@@ -37,7 +38,7 @@ namespace KTools {
 			}
 		}
 		// no init constructor.
-		explicit Vector(Nothing) {}
+		Vector(Nil) {}
 		Vector(T pad) {
 			for(size_t i = 0; i < N; i++) {
 				x[i] = pad;
@@ -57,10 +58,6 @@ namespace KTools {
 
 		Vector copy() const {
 			return Vector(*this);
-		}
-
-		static size_t dimension() {
-			return N;
 		}
 
 		T& operator[](size_t i) {
@@ -97,6 +94,14 @@ namespace KTools {
 			return Vector(v) *= lambda;
 		}
 
+		Vector& negate() {
+			return (*this) *= -1;
+		}
+
+		Vector operator-() const {
+			return Vector(*this).negate();
+		}
+
 		T inner(const Vector& v) const {
 			T ret = T();
 			for(size_t i = 0; i < N; i++) {
@@ -112,7 +117,7 @@ namespace KTools {
 
 		template<size_t M>
 		Vector<M, T> extend(T pad = T()) const {
-			Vector<M, T> v = Nil;
+			Vector<M, T> v = nil;
 			for(size_t i = 0; i < (M < N ? M : N); i++) {
 				v.x[i] = x[i];
 			}
@@ -148,7 +153,7 @@ namespace KTools {
 		SquareMatrix() : super() {
 			setDiagonal(1);
 		}
-		explicit SquareMatrix(Nothing) : super(Nil) {}
+		explicit SquareMatrix(Nil) : super(nil) {}
 		explicit SquareMatrix(T diag) : super() {
 			setDiagonal(diag);
 		}
@@ -223,7 +228,7 @@ namespace KTools {
 		}
 
 		SquareMatrix operator*(const SquareMatrix& M) const {
-			SquareMatrix result = Nil;
+			SquareMatrix result = nil;
 			multiply(*this, M, result);
 			return result;
 		}
@@ -261,7 +266,7 @@ namespace KTools {
 
 	public:
 		ProjectiveMatrix() : super() {}
-		explicit ProjectiveMatrix(Nothing) : super(Nil) {}
+		explicit ProjectiveMatrix(Nil) : super(nil) {}
 		ProjectiveMatrix(T diag) : super(diag) {}
 		ProjectiveMatrix(const ProjectiveMatrix& A) : super(A) {}
 		explicit ProjectiveMatrix(const super& A) : super(A) {}
@@ -278,7 +283,7 @@ namespace KTools {
 		}
 
 		ProjectiveMatrix operator*(const super& M) const {
-			ProjectiveMatrix result = Nil;
+			ProjectiveMatrix result = nil;
 			multiply(*this, M, result);
 			return result;
 		}
@@ -310,7 +315,7 @@ namespace KTools {
 		}
 
 		SquareMatrix<n, T> getLinearPart() const {
-			SquareMatrix<n, T> result = Nil;
+			SquareMatrix<n, T> result = nil;
 			getLinearPart(result);
 			return result;
 		}
@@ -338,7 +343,7 @@ namespace KTools {
 		}
 
 		Vector<n, T> getTranslation() const {
-			Vector<n, T> result = Nil;
+			Vector<n, T> result = nil;
 			getTranslation(result);
 			return result;
 		}
@@ -399,6 +404,21 @@ namespace KTools {
 		typedef Vector<N, T> point_type;
 
 		vector_type a, b, c;
+
+		Triangle() : a(), b(), c() {}
+		Triangle(const vertex_type& _a, const vertex_type& _b, const vertex_type& _c) : a(_a), b(_b), c(_c) {}
+		Triangle(const Triangle& trig) : a(trig.a), b(trig.b), c(trig.c) {}
+
+		Triangle& operator+=(const vector_type& v) {
+			a += v;
+			b += v;
+			c += v;
+			return *this;
+		}
+
+		Triangle operator+(const vector_type& v) const {
+			return Triangle(*this) += v;
+		}
 	};
 
 	template<size_t M, size_t N>
@@ -410,6 +430,7 @@ namespace KTools {
 	class BoundingBox {
 	public:
 		typedef Vector<2, T> vector_type;
+		typedef vector_type point_type;
 
 	private:
 		vector_type bottom_left;
@@ -426,6 +447,9 @@ namespace KTools {
 
 	public:
 		BoundingBox() : bottom_left(), top_right(), initialized(false) {}
+		BoundingBox(T _x, T _y, T _w, T _h) {
+			setDimensions(_x, _y, _w, _h);
+		}
 
 		operator bool() const {
 			return initialized;
@@ -443,16 +467,48 @@ namespace KTools {
 			return bottom_left[0];
 		}
 
+		void x(T _x) {
+			bottom_left[0] = _x;
+		}
+
+		T xmax() const {
+			return top_right[0];
+		}
+
+		void xmax(T _x) {
+			top_right[0] = _x;
+		}
+
 		T y() const {
 			return bottom_left[1];
+		}
+
+		void y(T _y) {
+			bottom_left[1] = _y;
+		}
+
+		T ymax() const {
+			return top_right[1];
+		}
+		
+		void ymax(T _y) {
+			top_right[1] = _y;
 		}
 
 		T w() const {
 			return top_right[0] - bottom_left[0];
 		}
 
+		void w(T _w) {
+			top_right[0] = bottom_left[0] + _w;
+		}
+
 		T h() const {
 			return top_right[1] - bottom_left[1];
+		}
+
+		void h(T _h) {
+			top_right[1] = bottom_left[1] + _h;
 		}
 
 		int int_w() const {
@@ -463,12 +519,35 @@ namespace KTools {
 			return dim_to_int(h());
 		}
 
+		void reset() {
+			bottom_left[0] = 0;
+			bottom_left[1] = 0;
+			top_right[0] = 0;
+			top_right[1] = 0;
+			initialized = false;
+		}
+
 		void setDimensions(T _x, T _y, T _w, T _h) {
 			bottom_left[0] = _x;
 			bottom_left[1] = _y;
 			top_right[0] = _x + _w;
 			top_right[1] = _y + _h;
 			initialized = true;
+		}
+
+		void intersect(const BoundingBox& bb) {
+			if(x() < bb.x()) {
+				x(bb.x());
+			}
+			if(y() < bb.y()) {
+				y(bb.y());
+			}
+			if(xmax() > bb.xmax()) {
+				xmax(bb.xmax());
+			}
+			if(ymax() > bb.ymax()) {
+				ymax(bb.ymax());
+			}
 		}
 
 		void addPoint(T u, T v) {

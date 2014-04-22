@@ -49,6 +49,10 @@ namespace Krane {
 			io.reorder(version);
 		}
 
+		if(verbosity >= 2) {
+			cout << "Got anim version " << version << "." << endl;
+		}
+
 		versionRequire();
 
 

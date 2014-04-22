@@ -36,7 +36,7 @@ const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = 
 
 
 static bool should_resize() {
-	return options::width != Nil || options::height != Nil || options::pow2;
+	return options::width != nil || options::height != nil || options::pow2;
 }
 
 static void resize_image(Magick::Image& img) {
@@ -47,15 +47,15 @@ static void resize_image(Magick::Image& img) {
 
 	size.aspect(true);
 
-	if(options::width != Nil && options::height != Nil) {
+	if(options::width != nil && options::height != nil) {
 		size.width(options::width);
 		size.height(options::height);
 	}
-	else if(options::width != Nil) {
+	else if(options::width != nil) {
 		size.width(options::width);
 		size.height((h0*size.width())/w0);
 	}
-	else if(options::height != Nil) {
+	else if(options::height != nil) {
 		size.height(options::height);
 		size.width((w0*size.height())/h0);
 	}

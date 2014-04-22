@@ -1,5 +1,5 @@
-#ifndef KTECH_CONFIG_H
-#define KTECH_CONFIG_H
+#ifndef KTOOLS_CONFIG_H
+#define KTOOLS_CONFIG_H
 
 /* define if the library defines strstream */
 #cmakedefine HAVE_CLASS_STRSTREAM
@@ -27,6 +27,10 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H
+
+#cmakedefine HAVE_SNPRINTF
+
+#cmakedefine HAVE_MODE_T
 
 /* Define to the full name of this package. */
 #cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"

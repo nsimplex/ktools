@@ -13,6 +13,7 @@
 #include <iterator>
 #include <cassert>
 #include <cstdlib>
+#include <cerrno>
 
 #ifndef PATH_MAX
 #	define PATH_MAX 65536
@@ -112,8 +113,13 @@ namespace Compat {
 		}
 
 		bool isDirectory() const {
+#ifdef IS_WINDOWS
+			DWORD dwAttrib = GetFileAttributes(c_str());
+			return dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+#else
 			stat_t buf;
 			return stat(buf) && S_ISDIR(buf.st_mode);
+#endif
 		}
 
 
@@ -158,10 +164,20 @@ namespace Compat {
 			return *this;
 		}
 
-		void makeAbsolute() {
-			char resolved_path[PATH_MAX];
-			if( realpath(c_str(), resolved_path) != NULL ) {
+		bool makeAbsolute() {
+			char resolved_path[PATH_MAX + 1];
+			const char * status;
+#ifdef IS_WINDOWS
+			status = _fullpath(resolved_path, c_str(), sizeof(resolved_path) - 1);
+#else
+			status = realpath(c_str(), resolved_path);
+#endif
+			if( status != NULL ) {
 				assignPath(resolved_path);
+				return true;
+			}
+			else {
+				return false;
 			}
 		}
 
@@ -279,6 +295,16 @@ namespace Compat {
 			}
 		}
 
+		bool hasExtension(const std::string& what) const {
+			const size_t pos = rfind(what);
+			if(pos != npos && pos > 0) {
+				return (*this)[pos - 1] == '.';
+			}
+			else {
+				return false;
+			}
+		}
+
 		Path& replaceExtension(const std::string& newext) {
 			const size_t start = get_extension_position();
 			if(start == npos) {
@@ -336,6 +362,25 @@ namespace Compat {
 
 		bool isOlderThan(const Path& p) const {
 			return p.isNewerThan(*this);
+		}
+
+		bool mkdir(mode_t mode = 0777, bool fail_on_existence = false) const {
+			int status;
+#if defined(IS_WINDOWS)
+			status = ::_mkdir(c_str());
+#else
+			status = ::mkdir(c_str(), mode);
+#endif
+			if(status != 0) {
+				if(!fail_on_existence && errno == EEXIST) {
+					return isDirectory();
+				}
+				else {
+					return false;
+				}
+			}
+			
+			return true;
 		}
 	};
 }

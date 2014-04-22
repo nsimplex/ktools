@@ -15,7 +15,7 @@ ENABLE_LANGUAGE(C)
 
 set( COMMON_INCLUDE_DIRS "" )
 set( LINK_DIRS "" )
-set( COMMON_LIBS "libktool" "squish" )
+set( COMMON_LIBS "ktool_common" "squish" )
 
 set( ktech_LIBS "" )
 set( krane_LIBS "pugixml" )
@@ -24,6 +24,7 @@ set( krane_LIBS "pugixml" )
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
+include(CheckFunctionExists)
 include(CheckTypeSize)
 include(CheckStructHasMember)
 
@@ -110,6 +111,12 @@ endif()
 #
 CHECK_TYPE_SIZE("long long" LONG_LONG)
 #
+CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+#
+set(CMAKE_EXTRA_INCLUDE_FILES "sys/stat.h")
+CHECK_TYPE_SIZE("mode_t" MODE_T)
+set(CMAKE_EXTRA_INCLUDE_FILES)
+#
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
 
@@ -132,14 +139,14 @@ else()
 	add_executable(ktech WIN32 ${ktech_SOURCES} ${ktech_HEADERS})
 	add_executable(krane WIN32 ${krane_SOURCES} ${krane_HEADERS})
 endif()
-add_library(libktool STATIC ${libktool_SOURCES} ${libktool_HEADERS})
+add_library(ktool_common STATIC ${ktool_common_SOURCES} ${ktool_common_HEADERS})
 
 target_link_libraries( ktech ${ktech_LIBS} )
 target_link_libraries( krane ${krane_LIBS} )
 
 set_property( TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}" )
 set_property( TARGET krane PROPERTY INCLUDE_DIRECTORIES "${KRANE_INCLUDE_DIRS}" )
-set_property( TARGET libktool PROPERTY INCLUDE_DIRECTORIES "${LIBKTOOL_INCLUDE_DIRS}" )
+set_property( TARGET ktool_common PROPERTY INCLUDE_DIRECTORIES "${LIBKTOOL_INCLUDE_DIRS}" )
 
 if(WIN32)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")

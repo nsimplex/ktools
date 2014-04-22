@@ -23,6 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktex/specs.hpp"
 #include "binary_io_utils.hpp"
 
+#include <squish/squish.h>
+
 namespace KTools {
 	namespace KTEX {
 		class File : public NonCopyable {

@@ -25,11 +25,12 @@ set( local_krane_HEADERS
 )
 
 
-set( local_libktool_SOURCES
+set( local_ktool_common_SOURCES
+	common/ktools_common.cpp
 	common/ktex/ktex.cpp common/ktex/specs.cpp
 )
 
-set( local_libktool_HEADERS
+set( local_ktool_common_HEADERS
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
 )
 
@@ -56,14 +57,14 @@ foreach(hdr ${local_krane_HEADERS})
 endforeach()
 
 
-set( prefixed_libktool_SOURCES )
-set( prefixed_libktool_HEADERS )
+set( prefixed_ktool_common_SOURCES )
+set( prefixed_ktool_common_HEADERS )
 
-foreach(src ${local_libktool_SOURCES})
-	list(APPEND prefixed_libktool_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${src})
+foreach(src ${local_ktool_common_SOURCES})
+	list(APPEND prefixed_ktool_common_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
-foreach(hdr ${local_libktool_HEADERS})
-	list(APPEND prefixed_libktool_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
+foreach(hdr ${local_ktool_common_HEADERS})
+	list(APPEND prefixed_ktool_common_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
 endforeach()
 
 
@@ -73,5 +74,5 @@ set( ktech_HEADERS "${prefixed_ktech_HEADERS}" PARENT_SCOPE )
 set( krane_SOURCES "${prefixed_krane_SOURCES}" PARENT_SCOPE )
 set( krane_HEADERS "${prefixed_krane_HEADERS}" PARENT_SCOPE )
 
-set( libktool_SOURCES "${prefixed_libktool_SOURCES}" PARENT_SCOPE )
-set( libktool_HEADERS "${prefixed_libktool_HEADERS}" PARENT_SCOPE )
+set( ktool_common_SOURCES "${prefixed_ktool_common_SOURCES}" PARENT_SCOPE )
+set( ktool_common_HEADERS "${prefixed_ktool_common_HEADERS}" PARENT_SCOPE )
