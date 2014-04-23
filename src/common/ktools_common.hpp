@@ -54,6 +54,7 @@ extern "C" {
 #include <algorithm>
 #include <functional>
 
+
 #include <Magick++.h>
 
 
@@ -72,6 +73,7 @@ int snprintf(char *str, size_t n, const char *fmt, ...);
 #		define RESTRICT
 #	endif
 #endif
+
 
 namespace KTools {
 	enum ExitStatus {

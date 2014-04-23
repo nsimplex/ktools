@@ -6,6 +6,7 @@ set( local_ktech_HEADERS
 	ktech/ktech.hpp ktech/ktech_common.hpp 
 	ktech/ktech_options.hpp ktech/ktech_options_output.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
+	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
 )
@@ -23,6 +24,7 @@ set( local_krane_HEADERS
 	krane/kbuild.hpp krane/kanim.hpp
 	krane/scml.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
+	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
 )
@@ -34,6 +36,8 @@ set( local_ktool_common_SOURCES
 )
 
 set( local_ktool_common_HEADERS
+	common/metaprogramming.hpp common/ktools_common.hpp
+	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
 )
 

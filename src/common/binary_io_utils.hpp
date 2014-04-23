@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTOOLS_IO_UTILS_HPP
 
 #include "ktools_common.hpp"
+#include "metaprogramming.hpp"
 
 #include <boost/detail/endian.hpp>
 #include <algorithm>
@@ -49,6 +50,49 @@ namespace KTools {
 
 		Endianess source_endianness;
 		Endianess target_endianness;
+
+
+		template<typename T>
+		static void raw_read_value(std::istream& in, T& n) {
+			in.read( reinterpret_cast<char*>( &n ), sizeof( n ) );
+		}
+
+		template<typename T>
+		static void raw_write_value(std::ostream& out, T n) {
+			out.write( reinterpret_cast<const char*>( &n ), sizeof( n ) );
+		}
+
+		/*
+		 * Reads a value affected by endianness.
+		 */
+		template<typename T>
+		inline void read_ordered_value(std::istream& in, T& n) const {
+			if(source_endianness == ktools_UNKNOWN_ENDIAN) {
+				throw Error("Undefined source endianness.");
+			}
+
+			raw_read_value(in, n);
+			
+			if(source_endianness == ktools_INVERSE_NATIVE_ENDIANNESS) {
+				reorder(n);
+			}
+		}
+
+		/*
+		 * Writes a value affected by endianness.
+		 */
+		template<typename T>
+		inline void write_ordered_value(std::ostream& out, T n) const {
+			if(target_endianness == ktools_UNKNOWN_ENDIAN) {
+				throw Error("Undefined target endianness.");
+			}
+
+			if(target_endianness == ktools_INVERSE_NATIVE_ENDIANNESS) {
+				reorder(n);
+			}
+
+			raw_write_value(out, n);
+		}
 
 	public:
 		BinIOHelper() : source_endianness(ktools_UNKNOWN_ENDIAN), target_endianness(ktools_LITTLE_ENDIAN) {}
@@ -126,12 +170,14 @@ namespace KTools {
 		
 		template<typename T>
 		static void raw_read_integer(std::istream& in, T& n) {
-			in.read( reinterpret_cast<char*>( &n ), sizeof( n ) );
+			staticAssertIntegral<T>();
+			raw_read_value(in, n);
 		}
 
 		template<typename T>
 		static void raw_write_integer(std::ostream& out, T n) {
-			out.write( reinterpret_cast<const char*>( &n ), sizeof( n ) );
+			staticAssertIntegral<T>();
+			raw_write_value(out, n);
 		}
 
 		// Based on boost's, to some extent.
@@ -143,38 +189,26 @@ namespace KTools {
 
 		template<typename T>
 		inline void read_integer(std::istream& in, T& n) const {
-			if(source_endianness == ktools_UNKNOWN_ENDIAN) {
-				throw Error("Undefined source endianness.");
-			}
-
-			raw_read_integer(in, n);
-			
-			if(source_endianness == ktools_INVERSE_NATIVE_ENDIANNESS) {
-				reorder(n);
-			}
+			staticAssertIntegral<T>();
+			read_ordered_value(in, n);
 		}
 
 		template<typename T>
 		inline void write_integer(std::ostream& out, T n) const {
-			if(target_endianness == ktools_UNKNOWN_ENDIAN) {
-				throw Error("Undefined target endianness.");
-			}
-
-			if(target_endianness == ktools_INVERSE_NATIVE_ENDIANNESS) {
-				reorder(n);
-			}
-
-			raw_write_integer(out, n);
+			staticAssertIntegral<T>();
+			write_ordered_value(out, n);
 		}
 
 		template<typename T>
 		inline void read_float(std::istream& in, T& x) const {
-			read_integer(in, x);
+			staticAssertFloating<T>();
+			read_ordered_value(in, x);
 		}
 
 		template<typename T>
 		inline void write_float(std::ostream& out, T x) const {
-			write_integer(out, x);
+			staticAssertFloating<T>();
+			write_ordered_value(out, x);
 		}
 	};
 }

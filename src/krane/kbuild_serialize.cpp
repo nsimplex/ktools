@@ -254,10 +254,10 @@ namespace Krane {
 		bbox.setDimensions(_x, _y, _w, _h);
 
 		uint32_t alphaidx;
-		io->read_float(in, alphaidx);
+		io->read_integer(in, alphaidx);
 
 		uint32_t alphacount;
-		io->read_float(in, alphacount);
+		io->read_integer(in, alphacount);
 		if(alphacount % 6 != 0) {
 			throw(KToolsError("Corrupted build file (frame VB count should be a multiple of 6)."));
 		}

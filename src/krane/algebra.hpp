@@ -428,11 +428,6 @@ namespace KTools {
 		}
 	};
 
-	template<size_t M, size_t N>
-	class require_greater_or_equal {
-		char x[M >= N ? 1 : -1];
-	};
-
 	template<typename T = float>
 	class BoundingBox {
 	public:
@@ -584,7 +579,7 @@ namespace KTools {
 
 		template<size_t N>
 		void addPoint(const Vector<N, T>& v) {
-			typedef require_greater_or_equal<N, 2> RET;
+			staticAssert<N >= 2>();
 			addPoint(v[0], v[1]);
 		}
 

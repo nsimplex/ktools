@@ -214,7 +214,7 @@ namespace Krane {
 		}
 		for(uint32_t i = 0; i < numevents; i++) {
 			hash_t ev_hash;
-			io->read_float(in, ev_hash);
+			io->read_integer(in, ev_hash);
 
 			if(verbosity >= 4) {
 				cout << "\t\t\tGot event: 0x" << hex << ev_hash << dec << endl;
