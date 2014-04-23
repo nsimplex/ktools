@@ -297,14 +297,21 @@ namespace Compat {
 			}
 		}
 
-		bool hasExtension(const std::string& what) const {
-			const size_t pos = rfind(what);
-			if(pos != npos && pos > 0) {
-				return (*this)[pos - 1] == '.';
+		bool hasExtension(const std::string& ext) const {
+			ssize_t len = ssize_t(length());
+			ssize_t extlen = ssize_t(ext.length());
+
+			ssize_t diff = len - extlen;
+
+			if(diff <= 0 || (*this)[diff - 1] != '.') return false;
+
+			for(ssize_t i = 0; i < extlen; i++) {
+				if( tolower((*this)[diff + i]) != tolower(ext[i]) ) {
+					return false;
+				}
 			}
-			else {
-				return false;
-			}
+
+			return true;
 		}
 
 		PathAbstraction& replaceExtension(const std::string& newext) {

@@ -19,6 +19,14 @@ static void sanitize_stream(std::ostream& out) {
 	out.imbue(locale::classic());
 }
 
+static inline int tomilli(float x) {
+	return int(ceilf(1000*x));
+}
+
+static inline int tomilli(double x) {
+	return int(ceil(1000*x));
+}
+
 
 /***********************************************************************/
 
@@ -29,7 +37,7 @@ struct BuildSymbolFrameMetadata {
 };
 
 struct BuildSymbolMetadata : public std::vector<BuildSymbolFrameMetadata> {
-	int folder_id;
+	uint32_t folder_id;
 };
 
 typedef map<hash_t, BuildSymbolMetadata> BuildMetadata;
@@ -40,15 +48,40 @@ struct GenericState {
 };
 
 struct BuildExporterState : public GenericState {
-	int folder_id;
+	uint32_t folder_id;
 
 	BuildExporterState() : folder_id(0) {}
 };
 
 struct BuildSymbolExporterState : public GenericState {
-	int file_id;
+	uint32_t file_id;
 
 	BuildSymbolExporterState() : file_id(0) {}
+};
+
+struct AnimationBankCollectionExporterState : public GenericState {
+	uint32_t entity_id;
+
+	AnimationBankCollectionExporterState() : entity_id(0) {}
+};
+
+struct AnimationBankExporterState : public GenericState {
+	uint32_t animation_id;
+
+	AnimationBankExporterState() : animation_id(0) {}
+};
+
+struct AnimationExporterState : public GenericState {
+	uint32_t key_id;
+
+	AnimationExporterState() : key_id(0) {}
+};
+
+struct AnimationFrameExporterState : public GenericState {
+	uint32_t timeline_id;
+	uint32_t z_index;
+
+	AnimationFrameExporterState() : timeline_id(0), z_index(0) {}
 };
 
 
@@ -62,7 +95,15 @@ static void exportBuildSymbol(xml_node& spriter_data, BuildExporterState& s, Bui
 static void exportBuildSymbolFrame(xml_node& folder, BuildSymbolExporterState& s, BuildSymbolFrameMetadata& framemeta, const KBuild::Symbol::Frame& frame);
 
 
-static void exportAnimationBankCollection(xml_node& spriter_data, const BuildMetadata& bmeta, const KAnimBankCollection& A);
+static void exportAnimationBankCollection(xml_node& spriter_data, const BuildMetadata& bmeta, const KAnimBankCollection& C);
+
+static void exportAnimationBank(xml_node& spriter_data, AnimationBankCollectionExporterState& s, const BuildMetadata& bmeta, const KAnimBank& B);
+
+static void exportAnimation(xml_node& entity, AnimationBankExporterState& s, const BuildMetadata& bmeta, const KAnim& A);
+
+static void exportAnimationFrame(xml_node& mainline, xml_node& animation, AnimationExporterState& s, const BuildMetadata& bmeta, const KAnim::Frame& frame);
+
+static void exportAnimationFrameElement(xml_node& mainline_key, xml_node& animation, AnimationFrameExporterState& s, const BuildSymbolMetadata& symmeta, const KAnim::Frame::Element& elem);
 
 
 /***********************************************************************/
@@ -71,10 +112,9 @@ static void exportAnimationBankCollection(xml_node& spriter_data, const BuildMet
 void Krane::exportToSCML(std::ostream& out, const KBuild& bild, const KAnimBankCollection& banks) {
 	sanitize_stream(out);
 
-	(void)banks;
-
 	xml_document scml;
 	xml_node decl = scml.prepend_child(node_declaration);
+	decl.append_attribute("version") = "1.0";
 	decl.append_attribute("encoding") = "UTF-8";
 
 	xml_node spriter_data = scml.append_child("spriter_data");
@@ -86,7 +126,7 @@ void Krane::exportToSCML(std::ostream& out, const KBuild& bild, const KAnimBankC
 	BuildMetadata bmeta;
 	exportBuild(spriter_data, bmeta, bild);
 
-	xml_node entity = spriter_data.append_child("entity");
+	exportAnimationBankCollection(spriter_data, bmeta, banks);
 
 	scml.save(out, "\t", format_default, encoding_utf8);
 }
@@ -108,7 +148,7 @@ static void exportBuild(xml_node& spriter_data, BuildMetadata& bmeta, const KBui
 static void exportBuildSymbol(xml_node& spriter_data, BuildExporterState& s, BuildSymbolMetadata& symmeta, const KBuild::Symbol& sym) {
 	typedef KBuild::frame_const_iterator frame_iterator;
 
-	const int folder_id = s.folder_id++;
+	const uint32_t folder_id = s.folder_id++;
 
 	xml_node folder = spriter_data.append_child("folder");
 
@@ -131,7 +171,7 @@ static void exportBuildSymbol(xml_node& spriter_data, BuildExporterState& s, Bui
 static void exportBuildSymbolFrame(xml_node& folder, BuildSymbolExporterState& s, BuildSymbolFrameMetadata& framemeta, const KBuild::Symbol::Frame& frame) {
 	typedef KBuild::float_type float_type;
 
-	const int file_id = s.file_id++;
+	const uint32_t file_id = s.file_id++;
 
 	xml_node file = folder.append_child("file");
 
@@ -157,4 +197,157 @@ static void exportBuildSymbolFrame(xml_node& folder, BuildSymbolExporterState& s
 
 /***********************************************************************/
 
+static void exportAnimationBankCollection(xml_node& spriter_data, const BuildMetadata& bmeta, const KAnimBankCollection& C) {
+	AnimationBankCollectionExporterState local_s;
+	for(KAnimBankCollection::const_iterator bankit = C.begin(); bankit != C.end(); ++bankit) {
+		const KAnimBank& B = *bankit->second;
+		exportAnimationBank(spriter_data, local_s, bmeta, B);
+	}
+}
 
+static void exportAnimationBank(xml_node& spriter_data, AnimationBankCollectionExporterState& s, const BuildMetadata& bmeta, const KAnimBank& B) {
+	const uint32_t entity_id = s.entity_id++;
+
+	xml_node entity = spriter_data.append_child("entity");
+
+	entity.append_attribute("id") = entity_id;
+	entity.append_attribute("name") = B.getName().c_str();
+
+	AnimationBankExporterState local_s;
+	for(KAnimBank::const_iterator animit = B.begin(); animit != B.end(); ++animit) {
+		const KAnim& A = *animit->second;
+		exportAnimation(entity, local_s, bmeta, A);
+	}
+}
+
+static void exportAnimation(xml_node& entity, AnimationBankExporterState& s, const BuildMetadata& bmeta, const KAnim& A) {
+	const uint32_t animation_id = s.animation_id++;
+
+	xml_node animation = entity.append_child("animation");
+
+	animation.append_attribute("id") = animation_id;
+	animation.append_attribute("name") = A.getFullName().c_str(); // BUILD_PLAYER ?
+	animation.append_attribute("length") = tomilli(A.getDuration());
+
+	xml_node mainline = animation.append_child("mainline");
+
+	AnimationExporterState local_s;
+	for(KAnim::framelist_t::const_iterator frameit = A.frames.begin(); frameit != A.frames.end(); ++frameit) {
+		const KAnim::Frame& frame = *frameit;
+		exportAnimationFrame(mainline, animation, local_s, bmeta, frame);
+	}
+}
+
+static void exportAnimationFrame(xml_node& mainline, xml_node& animation, AnimationExporterState& s, const BuildMetadata& bmeta, const KAnim::Frame& frame) {
+	const uint32_t key_id = s.key_id++;
+
+	xml_node mainline_key = mainline.append_child("key");
+	mainline_key.append_attribute("id") = key_id;
+
+	AnimationFrameExporterState local_s;
+
+	for(KAnim::Frame::elementlist_t::const_iterator elemit = frame.elements.begin(); elemit != frame.elements.end(); ++elemit) {
+		const KAnim::Frame::Element& elem = *elemit;
+		BuildMetadata::const_iterator symmeta_match = bmeta.find(elem.getHash());
+		if(symmeta_match == bmeta.end()) {
+			continue;
+		}
+		const BuildSymbolMetadata& symmeta = symmeta_match->second;
+		exportAnimationFrameElement(mainline_key, animation, local_s, symmeta, elem);
+	}
+}
+
+/*
+ * Decomposes (approximately if this is not possible) a matrix into x/y scalings and a rotation.
+ */
+template<typename T>
+static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot) {
+	scale_x = sqrt(a*a + b*b);
+	if(a < 0) scale_x = -scale_x;
+
+	scale_y = sqrt(c*c + d*d);
+	if(d < 0) scale_y = -scale_y;
+
+	rot = atan2(c, d);
+}
+
+/*
+ * TODO: group together all frames referencing the element as multiple keys in the timeline.
+ */
+static void exportAnimationFrameElement(xml_node& mainline_key, xml_node& animation, AnimationFrameExporterState& s, const BuildSymbolMetadata& symmeta, const KAnim::Frame::Element& elem) {
+	const uint32_t build_frame = elem.getBuildFrame();
+	if(build_frame >= symmeta.size()) return;
+
+	const uint32_t timeline_id = s.timeline_id++;
+	const uint32_t z_index = s.z_index++;
+	const BuildSymbolFrameMetadata& bframemeta = symmeta[build_frame];
+
+
+	KTools::DataFormatter fmt;
+
+
+	/*
+	 * Mainline children.
+	 */
+	
+	xml_node object_ref = mainline_key.append_child("object_ref");
+
+	object_ref.append_attribute("id") = timeline_id;
+	object_ref.append_attribute("name") = elem.getName().c_str();
+	object_ref.append_attribute("folder") = symmeta.folder_id;
+	object_ref.append_attribute("file") = build_frame; // This is where deduplication would need to be careful.
+	object_ref.append_attribute("abs_x") = 0;
+	object_ref.append_attribute("abs_y") = 0;
+	object_ref.append_attribute("abs_pivot_x") = bframemeta.pivot_x;
+	object_ref.append_attribute("abs_pivot_y") = bframemeta.pivot_y;
+	object_ref.append_attribute("abs_angle") = 0; // 360?
+	object_ref.append_attribute("abs_scale_x") = 1;
+	object_ref.append_attribute("abs_scale_y") = 1;
+	object_ref.append_attribute("abs_a") = 1;
+	object_ref.append_attribute("timeline") = timeline_id;
+	object_ref.append_attribute("key") = 0; // This would need to change on deduplication.
+	object_ref.append_attribute("z_index") = z_index;
+
+
+
+	/*
+	 * Animation children.
+	 */
+
+	xml_node timeline = animation.append_child("timeline");
+
+	timeline.append_attribute("id") = timeline_id;
+	timeline.append_attribute("name") = fmt("%s_%u_%u", elem.getName().c_str(), unsigned(build_frame), unsigned(timeline_id));
+
+
+
+	xml_node timeline_key = timeline.append_child("key");
+
+	timeline_key.append_attribute("id") = 0; // This would need to change on deduplication.
+	timeline_key.append_attribute("spin") = 0;
+
+
+
+	xml_node object = timeline_key.append_child("object");
+
+	const KAnim::Frame::Element::matrix_type& M = elem.getMatrix();
+
+	KAnim::Frame::Element::matrix_type::projective_vector_type trans;
+	M.getTranslation(trans);
+	trans *= SCALE;
+
+	KAnim::float_type scale_x, scale_y, rot;
+	decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot);
+	if(rot < 0) {
+		rot += 2*M_PI;
+	}
+	rot *= 180.0/M_PI;
+
+	object.append_attribute("folder") = symmeta.folder_id;
+	object.append_attribute("file") = build_frame;
+	object.append_attribute("x") = trans[0];
+	object.append_attribute("y") = trans[1];
+	object.append_attribute("scale_x") = scale_x;
+	object.append_attribute("scale_y") = scale_y;
+	object.append_attribute("angle") = rot;
+}

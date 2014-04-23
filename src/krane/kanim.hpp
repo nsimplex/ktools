@@ -99,6 +99,10 @@ namespace Krane {
 					return name;
 				}
 
+				hash_t getHash() const {
+					return hash;
+				}
+
 				uint32_t getBuildFrame() const {
 					return build_frame;
 				}
@@ -131,6 +135,10 @@ namespace Krane {
 
 			bbox_type bbox;
 
+			float getDuration() const {
+				return 1/parent->getFrameRate();
+			}
+
 			uint32_t countEvents() const {
 				return uint32_t(events.size());
 			}
@@ -143,8 +151,6 @@ namespace Krane {
 			std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
 		};
 
-		typedef std::vector<Frame> framelist_t;
-
 	private:
 		std::string name;
 
@@ -155,6 +161,7 @@ namespace Krane {
 		float frame_rate;
 
 	public:
+		typedef std::vector<Frame> framelist_t;
 		framelist_t frames;
 
 		const std::string& getName() const {
@@ -180,6 +187,18 @@ namespace Krane {
 
 		void setBank(const std::string& s) {
 			bank = s;
+		}
+
+		uint32_t getFrameCount() const {
+			return countFrames();
+		}
+
+		float getFrameRate() const {
+			return frame_rate;
+		}
+
+		float getDuration() const {
+			return getFrameCount()/getFrameRate();
 		}
 
 		uint32_t countEvents() const {

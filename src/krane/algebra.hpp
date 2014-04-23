@@ -143,6 +143,9 @@ namespace KTools {
 		typedef Vector<n*n, T> super;
 
 	public:
+		// For matrix-vector multiplication.
+		typedef Vector<n, T> vector_type;
+
 		SquareMatrix& setDiagonal(T diag = T(1)) {
 			for(size_t i = 0; i < n; i++) {
 				(*this)[i][i] = diag;
@@ -233,7 +236,7 @@ namespace KTools {
 			return result;
 		}
 
-		Vector<n, T> operator*(const Vector<n, T>& v) const {
+		vector_type operator*(const vector_type& v) const {
 			Vector<n, T> u;
 			for(size_t i = 0; i < n; i++) {
 				const T* row = (*this)[i];
@@ -244,7 +247,7 @@ namespace KTools {
 			return u;
 		}
 
-		Vector<n, T> operator()(const Vector<n, T>& v) const {
+		vector_type operator()(const vector_type& v) const {
 			return (*this) * v;
 		}
 	};
@@ -265,6 +268,10 @@ namespace KTools {
 		typedef typename super::super vectorsuper;
 
 	public:
+		// For matrix-vector multiplication representing translation.
+		typedef Vector<n, T> affine_vector_type;
+		typedef affine_vector_type projective_vector_type;
+
 		ProjectiveMatrix() : super() {}
 		explicit ProjectiveMatrix(Nil) : super(nil) {}
 		ProjectiveMatrix(T diag) : super(diag) {}
@@ -288,7 +295,7 @@ namespace KTools {
 			return result;
 		}
 
-		Vector<n, T> operator*(const Vector<n, T>& v) const {
+		affine_vector_type operator*(const affine_vector_type& v) const {
 			Vector<n, T> u;
 			for(size_t i = 0; i < n; i++) {
 				const T* row = (*this)[i];
@@ -300,7 +307,7 @@ namespace KTools {
 			return u;
 		}
 
-		Vector<n, T> operator()(const Vector<n, T>& v) const {
+		affine_vector_type operator()(const affine_vector_type& v) const {
 			return (*this) * v;
 		}
 
@@ -330,19 +337,19 @@ namespace KTools {
 			}
 		}
 
-		void getTranslation(Vector<n, T>& v) const {
+		void getTranslation(affine_vector_type& v) const {
 			for(size_t i = 0; i < n; i++) {
 				v[i] = (*this)[i][n];
 			}
 		}
 
-		void setTranslation(const Vector<n, T>& v) {
+		void setTranslation(affine_vector_type& v) {
 			for(size_t i = 0; i < n; i++) {
 				(*this)[i][n] = v[i];
 			}
 		}
 
-		Vector<n, T> getTranslation() const {
+		affine_vector_type getTranslation() const {
 			Vector<n, T> result = nil;
 			getTranslation(result);
 			return result;
