@@ -72,7 +72,18 @@ namespace Krane {
 				}
 
 			public:
+				/*
+				 * This is the initial position of this frame as an animation frame.
+				 * (i.e., this times the framerate is the initial instant it is shown).
+				 *
+				 * Counts from 0.
+				 */
 				uint32_t framenum;
+
+				/*
+				 * This is the time length of this frame measured in animation frames.
+				 * (i.e., this times the framerate is the time length it is shown)
+				 */
 				uint32_t duration;
 
 				/*
@@ -165,24 +176,31 @@ namespace Krane {
 
 			framelist_t frames;
 
-			bool operator<(const Symbol& s) const {
-				return hash < s.hash || (hash == s.hash && name < s.name);
-			}
-
-			bool operator==(const Symbol& s) const {
-				return hash == s.hash && name == s.name;
-			}
-
-			bool operator!=(const Symbol& s) const {
-				return !(*this == s);
-			}
-
 			void getName(std::string& s) const {
 				s = name;
 			}
 
 			const std::string& getName() const {
 				return name;
+			}
+
+			// This counts the number of symbol frames (i.e., distinct
+			// animation states).
+			uint32_t countFrames() const {
+				return frames.size();
+			}
+
+			// This counts the number of animation frames (i.e., as a
+			// measure of time).
+			uint32_t countAnimationFrames() const {
+				const size_t nsymframes = frames.size();
+				if(nsymframes > 0) {
+					const Frame& lastframe = frames[nsymframes - 1];
+					return lastframe.framenum + lastframe.duration;
+				}
+				else {
+					return 0;
+				}
 			}
 
 			void getPath(Compat::Path& p) const {

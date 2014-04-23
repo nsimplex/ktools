@@ -11,7 +11,7 @@ namespace Krane {
 
 	void GenericKAnimFile::loadFrom(const string& path, int verbosity) {
 		if(verbosity >= 0) {
-			std::cout << "Loading anim file from `" << path << "'..." << std::endl;
+			std::cout << "Loading animations from `" << path << "'..." << std::endl;
 		}
 		
 		std::ifstream in(path.c_str(), std::ifstream::in | std::ifstream::binary);

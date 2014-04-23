@@ -115,10 +115,6 @@ namespace Krane {
 					return M;
 				}
 
-				float_type getDepth() const {
-					return z;
-				}
-
 				float_type getAnimSortOrder() const {
 					return z;
 				}
@@ -508,8 +504,6 @@ namespace Krane {
 
 		// Now owns the anim.
 		void addAnim(KAnim*& A) {
-			using namespace std;
-			cout << "Adding anim " << A << endl;
 			if(!(s == NULL || (*s)(*A))) {
 				delete A;
 				A = NULL;

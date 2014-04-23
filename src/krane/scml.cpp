@@ -1,6 +1,8 @@
 #include "scml.hpp"
 #include <pugixml/pugixml.hpp>
 
+#include <limits>
+
 using namespace std;
 using namespace Krane;
 using namespace pugi;
@@ -8,8 +10,13 @@ using namespace pugi;
 
 /***********************************************************************/
 
-// Global linear scale (applied to dimensions, translations, etc.).
-static const computations_float_type SCALE = 1;
+/*
+ * Global linear scale (applied to dimensions, translations, etc.).
+ *
+ * This is NOT arbitrary, being needed for translations and positions to
+ * match the expected behaviour. Hence it is not configurable.
+ */
+static const computations_float_type SCALE = 1.0/3;
 
 
 /***********************************************************************/
@@ -20,69 +27,80 @@ static void sanitize_stream(std::ostream& out) {
 }
 
 static inline int tomilli(float x) {
-	return int(ceilf(1000*x));
+	return int(ceilf(1000.0f*x));
 }
 
 static inline int tomilli(double x) {
-	return int(ceil(1000*x));
+	return int(ceil(1000.0*x));
 }
 
 
 /***********************************************************************/
 
 
-struct BuildSymbolFrameMetadata {
-	computations_float_type pivot_x;
-	computations_float_type pivot_y;
-};
+namespace {
+	struct BuildSymbolFrameMetadata {
+		computations_float_type pivot_x;
+		computations_float_type pivot_y;
+	};
 
-struct BuildSymbolMetadata : public std::vector<BuildSymbolFrameMetadata> {
-	uint32_t folder_id;
-};
+	struct BuildSymbolMetadata : public std::vector<BuildSymbolFrameMetadata> {
+		uint32_t folder_id;
+	};
 
-typedef map<hash_t, BuildSymbolMetadata> BuildMetadata;
+	// The map keys are the build symbol names' hashes.
+	typedef map<hash_t, BuildSymbolMetadata> BuildMetadata;
 
 
-struct GenericState {
-//	KTools::DataFormatter fmt;
-};
+	/***********/
 
-struct BuildExporterState : public GenericState {
-	uint32_t folder_id;
 
-	BuildExporterState() : folder_id(0) {}
-};
+	struct GenericState {
+	//	KTools::DataFormatter fmt;
+	};
 
-struct BuildSymbolExporterState : public GenericState {
-	uint32_t file_id;
+	struct BuildExporterState : public GenericState {
+		uint32_t folder_id;
 
-	BuildSymbolExporterState() : file_id(0) {}
-};
+		BuildExporterState() : folder_id(0) {}
+	};
 
-struct AnimationBankCollectionExporterState : public GenericState {
-	uint32_t entity_id;
+	struct BuildSymbolExporterState : public GenericState {
+		uint32_t file_id;
 
-	AnimationBankCollectionExporterState() : entity_id(0) {}
-};
+		BuildSymbolExporterState() : file_id(0) {}
+	};
 
-struct AnimationBankExporterState : public GenericState {
-	uint32_t animation_id;
+	struct AnimationBankCollectionExporterState : public GenericState {
+		uint32_t entity_id;
 
-	AnimationBankExporterState() : animation_id(0) {}
-};
+		AnimationBankCollectionExporterState() : entity_id(0) {}
+	};
 
-struct AnimationExporterState : public GenericState {
-	uint32_t key_id;
+	struct AnimationBankExporterState : public GenericState {
+		uint32_t animation_id;
 
-	AnimationExporterState() : key_id(0) {}
-};
+		AnimationBankExporterState() : animation_id(0) {}
+	};
 
-struct AnimationFrameExporterState : public GenericState {
-	uint32_t timeline_id;
-	uint32_t z_index;
+	struct AnimationExporterState : public GenericState {
+		uint32_t key_id;
+		computations_float_type running_length;
 
-	AnimationFrameExporterState() : timeline_id(0), z_index(0) {}
-};
+		AnimationExporterState() : key_id(0), running_length(0) {}
+	};
+
+	struct AnimationFrameExporterState : public GenericState {
+		uint32_t timeline_id;
+		uint32_t z_index;
+
+		computations_float_type last_sort_order;
+
+		AnimationFrameExporterState() : timeline_id(0), z_index(0) {
+			last_sort_order = numeric_limits<computations_float_type>::infinity();
+		}
+	};
+}
 
 
 /***********************************************************************/
@@ -150,6 +168,10 @@ static void exportBuildSymbol(xml_node& spriter_data, BuildExporterState& s, Bui
 
 	const uint32_t folder_id = s.folder_id++;
 
+	// DEBUG
+	cout << "Exporting symbol " << sym.getName() << endl;
+	// END DEBUG
+
 	xml_node folder = spriter_data.append_child("folder");
 
 	folder.append_attribute("id") = folder_id;
@@ -158,11 +180,9 @@ static void exportBuildSymbol(xml_node& spriter_data, BuildExporterState& s, Bui
 	BuildSymbolExporterState local_s;
 
 	symmeta.resize(sym.frames.size());
-	size_t framenum = 0;
 	for(frame_iterator it = sym.frames.begin(); it != sym.frames.end(); ++it) {
 		const KBuild::Symbol::Frame& frame = *it;
-		exportBuildSymbolFrame(folder, local_s, symmeta[framenum], frame);
-		framenum++;
+		exportBuildSymbolFrame(folder, local_s, symmeta[local_s.file_id], frame);
 	}
 
 	symmeta.folder_id = folder_id;
@@ -173,16 +193,23 @@ static void exportBuildSymbolFrame(xml_node& folder, BuildSymbolExporterState& s
 
 	const uint32_t file_id = s.file_id++;
 
+	// DEBUG
+	cout << "\tExporting frame #" << file_id << endl;
+	cout << "\t\tframenum: " << frame.framenum << endl;
+	cout << "\t\tduration: " << frame.duration << endl;
+	// END DEBUG
+
 	xml_node file = folder.append_child("file");
 
-	float_type x, y, w, h;
+	float_type x, y;
+	int w, h;
 	x = frame.bbox.x();
 	y = frame.bbox.y();
-	w = frame.bbox.w();
-	h = frame.bbox.h();
+	w = frame.bbox.int_w();
+	h = frame.bbox.int_h();
 
-	computations_float_type pivot_x = 0.5 - (x/w)*SCALE;
-	computations_float_type pivot_y = 0.5 + (y/h)*SCALE;
+	computations_float_type pivot_x = 0.5 - (x/w);//*SCALE;
+	computations_float_type pivot_y = 0.5 + (y/h);//*SCALE;
 
 	framemeta.pivot_x = pivot_x;
 	framemeta.pivot_y = pivot_y;
@@ -240,13 +267,16 @@ static void exportAnimation(xml_node& entity, AnimationBankExporterState& s, con
 
 static void exportAnimationFrame(xml_node& mainline, xml_node& animation, AnimationExporterState& s, const BuildMetadata& bmeta, const KAnim::Frame& frame) {
 	const uint32_t key_id = s.key_id++;
+	const computations_float_type running_length = s.running_length;
+	s.running_length += frame.getDuration();
 
 	xml_node mainline_key = mainline.append_child("key");
 	mainline_key.append_attribute("id") = key_id;
+	mainline_key.append_attribute("time") = tomilli(running_length);
 
 	AnimationFrameExporterState local_s;
 
-	for(KAnim::Frame::elementlist_t::const_iterator elemit = frame.elements.begin(); elemit != frame.elements.end(); ++elemit) {
+	for(KAnim::Frame::elementlist_t::const_reverse_iterator elemit = frame.elements.rbegin(); elemit != frame.elements.rend(); ++elemit) {
 		const KAnim::Frame::Element& elem = *elemit;
 		BuildMetadata::const_iterator symmeta_match = bmeta.find(elem.getHash());
 		if(symmeta_match == bmeta.end()) {
@@ -284,6 +314,16 @@ static void exportAnimationFrameElement(xml_node& mainline_key, xml_node& animat
 
 
 	KTools::DataFormatter fmt;
+
+	
+	// Sanity checking.
+	{
+		computations_float_type sort_order = elem.getAnimSortOrder();
+		if(sort_order > s.last_sort_order) {
+			throw logic_error("State invariant breached: anim sort order progression is not monotone.");
+		}
+		s.last_sort_order = sort_order;
+	}
 
 
 	/*
@@ -334,7 +374,7 @@ static void exportAnimationFrameElement(xml_node& mainline_key, xml_node& animat
 
 	KAnim::Frame::Element::matrix_type::projective_vector_type trans;
 	M.getTranslation(trans);
-	trans *= SCALE;
+	//trans *= SCALE;
 
 	KAnim::float_type scale_x, scale_y, rot;
 	decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot);
@@ -345,8 +385,8 @@ static void exportAnimationFrameElement(xml_node& mainline_key, xml_node& animat
 
 	object.append_attribute("folder") = symmeta.folder_id;
 	object.append_attribute("file") = build_frame;
-	object.append_attribute("x") = trans[0];
-	object.append_attribute("y") = trans[1];
+	object.append_attribute("x") = trans[0]*SCALE;
+	object.append_attribute("y") = -trans[1]*SCALE;
 	object.append_attribute("scale_x") = scale_x;
 	object.append_attribute("scale_y") = scale_y;
 	object.append_attribute("angle") = rot;

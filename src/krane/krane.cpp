@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 	Magick::InitializeMagick(argv[0]);
 
 	if(argc != 3) {
-		cerr << "Give me an input and an output dir as arguments!" << endl;
+		cerr << "Give me an input dir and an output dir as arguments!" << endl;
 		exit(1);
 	}
 
@@ -44,10 +44,10 @@ int main(int argc, char* argv[]) {
 		}
 
 		KBuildFile bildfile;
-		bildfile.loadFrom(bildpath, 1);
+		bildfile.loadFrom(bildpath, 0);
 
 		KAnimFile<> animfile;
-		animfile.loadFrom(animpath, 1);
+		animfile.loadFrom(animpath, 0);
 
 		KBuild& bild = *bildfile.getBuild();
 
@@ -59,10 +59,13 @@ int main(int argc, char* argv[]) {
 		typedef	list< pair<Compat::Path, Magick::Image> > imglist_t;
 		imglist_t imglist;
 
+		cout << "Splicing build atlas..." << endl;
+
 		bild.getImages( back_inserter(imglist) );
 
+		cout << "Writing frame images..." << endl;
 		for(imglist_t::iterator it = imglist.begin(); it != imglist.end(); ++it) {
-			cout << it->first << endl;
+			//cout << it->first << endl;
 
 			Compat::Path outpath = outputdir/it->first;
 
@@ -73,7 +76,7 @@ int main(int argc, char* argv[]) {
 			it->second.write(outpath);
 		}
 
-		cout << "Splitting banks..." << endl;
+		cout << "Splitting animation banks..." << endl;
 
 		KAnimBankCollection banks;
 		banks.addAnims( animfile.anims.begin(), animfile.anims.end() );
@@ -85,6 +88,8 @@ int main(int argc, char* argv[]) {
 			throw Error("failed to open output scml file.");
 		}
 		exportToSCML(scml, bild, banks);
+
+		cout << "Done." << endl;
 	}
 	catch(exception& e) {
 		cerr << e.what() << endl;
