@@ -96,17 +96,8 @@ namespace Krane {
 			hash_t h;
 			io.read_integer(in, h);
 
-			uint32_t slen;
-			char *raw_str;
-			io.read_integer(in, slen);
-			raw_str = new char[slen];
-
-			in.read(raw_str, slen);
 			string& str = ht[h];
-			str.assign(raw_str, slen);
-
-			delete[] raw_str;
-			raw_str = NULL;
+			io.read_len_string<uint32_t>(in, str);
 
 			if(verbosity >= 5) {
 				cout << "\tGot 0x" << hex << h << dec << " => \"" << str << "\"" << endl;
@@ -127,22 +118,17 @@ namespace Krane {
 	}
 
 	istream& KAnim::loadPre(istream& in, int verbosity) {
-		uint32_t namelen;
-		char *raw_name;
-		io->read_integer(in, namelen);
-		raw_name = new char[namelen];
-		in.read(raw_name, namelen);
-		name.assign(raw_name, namelen);
-		delete[] raw_name;
-		raw_name = NULL;
-
+		io->read_len_string<uint32_t>(in, name);
 		if(verbosity >= 1) {
 			cout << "Got animation name: " << name << endl;
 		}
 
 		io->read_integer(in, facing_byte);
 		io->read_integer(in, bank_hash);
-		io->read_float(in, frame_rate);
+
+		float _frame_rate;
+		io->read_float(in, _frame_rate);
+		frame_rate = _frame_rate;
 
 		uint32_t numframes;
 		io->read_integer(in, numframes);

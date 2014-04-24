@@ -1,6 +1,8 @@
 #include "krane.hpp"
 #include "ktex/ktex.hpp"
 
+#include <clocale>
+
 using namespace Krane;
 using namespace std;
 
@@ -22,6 +24,7 @@ Magick::Image load_image(const Compat::Path& path) {
 }
 
 int main(int argc, char* argv[]) {
+	(void)setlocale(LC_ALL, "C");
 	Magick::InitializeMagick(argv[0]);
 
 	if(argc != 3) {

@@ -73,14 +73,7 @@ namespace Krane {
 		if(verbosity >= 1) {
 			cout << "Reading build name..." << endl;
 		}
-		uint32_t namelen;
-		char* raw_name;
-		io->read_integer(in, namelen);
-		raw_name = new char[namelen];
-		in.read(raw_name, namelen);
-		name.assign(raw_name, namelen);
-		delete[] raw_name;
-		raw_name = NULL;
+		io->read_len_string<uint32_t>(in, name);
 		if(verbosity >= 1) {
 			cout << "\tGot build name: " << name << endl;
 		}
@@ -95,14 +88,7 @@ namespace Krane {
 		}
 		atlasnames.resize(numatlases);
 		for(uint32_t i = 0; i < numatlases; i++) {
-			uint32_t atlasnamelen;
-			char* raw_atlasname;
-			io->read_integer(in, atlasnamelen);
-			raw_atlasname = new char[atlasnamelen];
-			in.read(raw_atlasname, atlasnamelen);
-			atlasnames[i].assign(raw_atlasname, atlasnamelen);
-			delete[] raw_atlasname;
-
+			io->read_len_string<uint32_t>(in, atlasnames[i]);
 			if(verbosity >= 1) {
 				cout << "\tGot atlas name: " << atlasnames[i] << endl;
 			}
@@ -174,20 +160,17 @@ namespace Krane {
 				}
 			}
 
-			uint32_t symb_namelen;
-			char* raw_symbname;
-			io->read_integer(in, symb_namelen);
-			raw_symbname = new char[symb_namelen];
-			in.read(raw_symbname, symb_namelen);
-			if(symb != NULL) {
-				symb->name.assign(raw_symbname, symb_namelen);
+			if(symb == NULL) {
+				io->skip_len_string<uint32_t>(in);
+			}
+			else {
+				io->read_len_string<uint32_t>(in, symb->name);
 				num_namedsymbols++;
 
 				if(strhash(symb->name) != symb->hash) {
 					throw KToolsError("Hash for build symbol '" + symb->name + "' does not match its name.");
 				}
 			}
-			delete[] raw_symbname;
 
 			if(verbosity >= 2) {
 				cout << "\tGot 0x" << hex << h << dec << " => \"" << symb->name << "\"" << endl;

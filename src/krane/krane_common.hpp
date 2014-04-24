@@ -42,15 +42,15 @@ namespace Krane {
 		return *reinterpret_cast<hash_t*>(&h);
 	}
 
-	inline const BinIOHelper* topointer_binio(const BinIOHelper* io) {
-		return io;
-	}
-	inline const BinIOHelper* topointer_binio(const BinIOHelper& io) {
-		return &io;
-	}
-
 	template<class Outer>
 	class NestedSerializer {
+		static inline const BinIOHelper* topointer_binio(const BinIOHelper* io) {
+			return io;
+		}
+		static inline const BinIOHelper* topointer_binio(const BinIOHelper& io) {
+			return &io;
+		}
+
 	public:
 		const Outer* parent;
 		const BinIOHelper* io;
@@ -66,6 +66,8 @@ namespace Krane {
 		}
 
 		NestedSerializer() : parent(NULL), io(NULL) {}
+
+		virtual ~NestedSerializer() {}
 	};
 }
 

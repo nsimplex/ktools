@@ -114,37 +114,35 @@ namespace {
 
 	/*
 	 * Metadata on a single occurrence of a build symbol frame
-	 * (essentially, a key/object within a timeline)
+	 * (essentially, an object within a timeline)
 	 */
-	class AnimationSymbolFrameMetadata {
+	class AnimationSymbolFrameInstanceMetadata {
 	public:
 		typedef KAnim::Frame::Element::matrix_type matrix_type;
 
 	private:
 		const matrix_type* M;
 		uint32_t build_frame;
-		uint32_t start_time; // milli
 
 	public:
-		AnimationSymbolFrameMetadata() : M(NULL) {}
-		AnimationSymbolFrameMetadata(const KAnim::Frame::Element& elem, uint32_t _start_time) : M(NULL) {
-			initialize(elem, _start_time);
+		AnimationSymbolFrameInstanceMetadata() : M(NULL) {}
+		AnimationSymbolFrameInstanceMetadata(const KAnim::Frame::Element& elem) : M(NULL) {
+			initialize(elem);
 		}
 
-		void initialize(const KAnim::Frame::Element& elem, uint32_t _start_time) {
+		void initialize(const KAnim::Frame::Element& elem) {
 			cout << "initialize\n";
 			if(M != NULL) {
-				throw logic_error( ("Reinitializing AnimationSymbolFrameMetadata for frame element " + elem.getName() + ".").c_str() );
+				throw logic_error( ("Reinitializing AnimationSymbolFrameInstanceMetadata for frame element " + elem.getName() + ".").c_str() );
 			}
 			M = &elem.getMatrix();
 			build_frame = elem.getBuildFrame();
-			start_time = _start_time;
 			cout << "initialized\n";
 		}
 
 		const matrix_type& getMatrix() const {
 			if(M == NULL) {
-				throw logic_error("Attempt to fetch matrix from uninitialized AnimationSymbolFrameMetadata.");
+				throw logic_error("Attempt to fetch matrix from uninitialized AnimationSymbolFrameInstanceMetadata.");
 			}
 			return *M;
 		}
@@ -152,9 +150,20 @@ namespace {
 		uint32_t getBuildFrame() const {
 			return build_frame;
 		}
+	};
 
-		uint32_t getStartTime() const {
-			return start_time;
+	/*
+	 * Metadata on occurrences of a build symbol frame
+	 * (i.e., of the build frame from the animation perspective)
+	 */
+	class AnimationSymbolFrameMetadata : public list<AnimationSymbolFrameInstanceMetadata> {
+	public:
+		AnimationSymbolFrameMetadata() : list<AnimationSymbolFrameInstanceMetadata>() {}
+
+		void initialize(const KAnim::Frame::Element& elem) {
+			cout << "push_back" << endl;
+			push_back( AnimationSymbolFrameInstanceMetadata(elem) );
+			cout << "pushed" << endl;
 		}
 	};
 
@@ -164,46 +173,33 @@ namespace {
 	 *
 	 * Local to an animation.
 	 */
-	class AnimationSymbolMetadata : public list<AnimationSymbolFrameMetadata> {
+	class AnimationSymbolMetadata : public vector<AnimationSymbolFrameMetadata> {
 		xml_node timeline;
 		uint32_t id; // timeline id
 
-		int dupeness; // for dupes
-		bool is_dupe;
-
-		void setDupedName() {
-			DataFormatter fmt;
-			timeline.attribute("name") = fmt("%s_%d", timeline.attribute("name").as_string(), dupeness);
-		}
-
 	public:
-		AnimationSymbolMetadata(int _dupecnt) : timeline(), id(0), dupeness(_dupecnt), is_dupe(_dupecnt > 0) {}
+		AnimationSymbolMetadata() : timeline(), id(0) {}
 
 		/*
 		 * If no timeline node has been created yet, creates one and sets its attributes.
 		 *
 		 * Also initializes corresponding element indexed by the elem build frame.
 		 */
-		void initialize(xml_node animation, uint32_t& current_timeline_id, uint32_t start_time, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
+		void initialize(xml_node animation, uint32_t& current_timeline_id, uint32_t anim_frame_id, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
 			//assert(anim_frame_id < size());
 			if(!timeline) {
 				id = current_timeline_id++;
 				timeline = animation.append_child("timeline");
 				timeline.append_attribute("id") = id;
 				timeline.append_attribute("name") = elem.getName().c_str();
-
-				if(is_dupe) {
-					setDupedName();
-				}
+				assert(timeline);
 			}
 			cout << "Initializing metadata for animation " << animation.attribute("name").as_string() << ", element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", layer name " << elem.getLayerName() << endl;
-			push_back( AnimationSymbolFrameMetadata(elem, start_time) );
-		}
-
-		void setDupe() {
-			is_dupe = true;
-			if(timeline) {
-				setDupedName();
+			if(size() + 1 <= anim_frame_id + bframemeta.duration) {
+				resize(anim_frame_id + bframemeta.duration);
+			}
+			for(uint32_t i = 0; i < bframemeta.duration; i++) {
+				(*this)[anim_frame_id + i].initialize(elem);
 			}
 		}
 
@@ -220,48 +216,21 @@ namespace {
 			}
 			return id;
 		}
-
-		int getKeyId() const {
-			return int(size()) - 1;
-		}
 	};
 
 	/*
 	 * Maps build symbol hashes to their metadata (as animation frame elements).
 	 */
-	class AnimationMetadata : public map<hash_t, list<AnimationSymbolMetadata> > {
+	class AnimationMetadata : public std::map<hash_t, AnimationSymbolMetadata> {
 		xml_node animation;
 
 	public:
-		typedef list<AnimationSymbolMetadata> symbolmeta_list;
-		typedef symbolmeta_list list_type;
-
 		AnimationMetadata(xml_node _animation) : animation(_animation) {}
 
-		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t start_time, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
-			symbolmeta_list& L = (*this)[symbolHash];
-
-			const int dupeness = int(L.size());
-
-			for(symbolmeta_list::iterator it = L.begin(); it != L.end(); ++it) {
-				AnimationSymbolMetadata& animsymmeta = *it;
-
-				assert( ! animsymmeta.empty() );
-
-				if(animsymmeta.back().getStartTime() < start_time) {
-					animsymmeta.initialize(animation, current_timeline_id, start_time, bframemeta, elem);
-					return animsymmeta;
-				}
-			}
-
-			L.push_back( AnimationSymbolMetadata(dupeness) );
-			AnimationSymbolMetadata& animsymmeta = L.back();
-			animsymmeta.initialize(animation, current_timeline_id, start_time, bframemeta, elem);
-
-			if(dupeness > 0) {
-				L.front().setDupe();
-			}
-
+		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t anim_frame_id, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
+			AnimationSymbolMetadata& animsymmeta = (*this)[symbolHash];
+			animsymmeta.reserve(256);
+			animsymmeta.initialize(animation, current_timeline_id, anim_frame_id, bframemeta, elem);
 			return animsymmeta;
 		}
 	};
@@ -288,7 +257,7 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem);
 
-static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, const AnimationSymbolMetadata& animsymmeta);
+static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, const AnimationSymbolMetadata& animsymmeta, computations_float_type frame_duration);
 
 
 /***********************************************************************/
@@ -437,18 +406,14 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 		exportAnimationFrame(mainline, local_s, animmeta, bmeta, frame);
 	}
 
-	for(AnimationMetadata::const_iterator animsymlistit = animmeta.begin(); animsymlistit != animmeta.end(); ++animsymlistit) {
-		BuildMetadata::const_iterator symmeta_match = bmeta.find(animsymlistit->first);
+	for(AnimationMetadata::const_iterator animsymit = animmeta.begin(); animsymit != animmeta.end(); ++animsymit) {
+		BuildMetadata::const_iterator symmeta_match = bmeta.find(animsymit->first);
 
 		if(symmeta_match == bmeta.end()) {
 			throw logic_error("Program logic state invariant breached: keys of AnimationMetadata are not a subset of keys of BuildMetadata.");
 		}
 
-		const AnimationMetadata::list_type& animsymlist = animsymlistit->second;
-
-		for(AnimationMetadata::list_type::const_iterator animsymit = animsymlist.begin(); animsymit != animsymlist.end(); ++animsymit) {
-			exportAnimationSymbolTimeline(symmeta_match->second, *animsymit);
-		}
+		exportAnimationSymbolTimeline(symmeta_match->second, animsymit->second, frame_duration);
 	}
 }
 
@@ -456,11 +421,10 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 	const uint32_t key_id = s.key_id++;
 	const computations_float_type running_length = s.running_length;
 	s.running_length += frame.getDuration();
-	uint32_t start_time = tomilli(running_length);
 
 	xml_node mainline_key = mainline.append_child("key");
 	mainline_key.append_attribute("id") = key_id;
-	mainline_key.append_attribute("time") = start_time;
+	mainline_key.append_attribute("time") = tomilli(running_length);
 
 	cout << "At animation frame " << key_id << endl;
 
@@ -485,12 +449,17 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 		cout << "Initializing child for bframemeta.duration = " << bframemeta.duration << endl;
 
-		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, bframemeta, elem);
+		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, key_id, bframemeta, elem);
 
-		exportAnimationFrameElement(mainline_key, local_s, animsymmeta, bframemeta, elem);
+		if(true || animsymmeta[key_id].size() <= 1) {
+			exportAnimationFrameElement(mainline_key, local_s, animsymmeta, bframemeta, elem);
+		}
 	}
 }
 
+/*
+ * TODO: group together all frames referencing the element as multiple keys in the timeline.
+ */
 static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
 	const uint32_t object_ref_id = s.object_ref_id++;
 	const uint32_t z_index = s.z_index++;
@@ -527,7 +496,7 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 	object_ref.append_attribute("abs_scale_y") = 1;
 	object_ref.append_attribute("abs_a") = 1;
 	object_ref.append_attribute("timeline") = animsymmeta.getTimelineId();
-	object_ref.append_attribute("key") = animsymmeta.getKeyId();//build_frame; // This changed for deduplication.
+	object_ref.append_attribute("key") = s.animation_frame_id;//build_frame; // This changed for deduplication.
 	object_ref.append_attribute("z_index") = z_index;
 }
 
@@ -548,9 +517,9 @@ static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot) 
 /*
  * Exports the corresponding animation timeline of a build symbol.
  */
-static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, const AnimationSymbolMetadata& animsymmeta) {
+static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, const AnimationSymbolMetadata& animsymmeta, computations_float_type frame_duration) {
 	// 3x3
-	typedef AnimationSymbolFrameMetadata::matrix_type matrix_type;
+	typedef AnimationSymbolFrameInstanceMetadata::matrix_type matrix_type;
 
 	/*
 	 * Animation children.
@@ -558,20 +527,27 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 	xml_node timeline = animsymmeta.getTimeline();
 
-	int key_id = 0;
-	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
+	uint32_t animation_frame = 0;
+	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter, ++animation_frame) {
 		const AnimationSymbolFrameMetadata& animsymframemeta = *animsymframeiter;
+
+		if(animsymframemeta.empty()) continue;
+
+		//const BuildSymbolFrameMetadata& bframemeta = symmeta[build_frame];
+
 
 		xml_node timeline_key = timeline.append_child("key");
 
-		timeline_key.append_attribute("id") = key_id++;//build_frame; // This changed for deduplication.
-		timeline_key.append_attribute("time") = animsymframemeta.getStartTime();//tomilli(frame_duration*bframemeta.duration);//tomilli(frame_duration*bframemeta.duration);
+		timeline_key.append_attribute("id") = animation_frame;//build_frame; // This changed for deduplication.
+		timeline_key.append_attribute("time") = tomilli(frame_duration*animation_frame);//tomilli(frame_duration*bframemeta.duration);//tomilli(frame_duration*bframemeta.duration);
 		timeline_key.append_attribute("spin") = 0;
 
+		for(AnimationSymbolFrameMetadata::const_iterator instanceiter = animsymframemeta.begin(); instanceiter != animsymframemeta.end(); ++instanceiter) {
+			const AnimationSymbolFrameInstanceMetadata& instance = *instanceiter;
 
 			xml_node object = timeline_key.append_child("object");
 
-			const matrix_type& M = animsymframemeta.getMatrix();
+			const matrix_type& M = instance.getMatrix();
 
 			matrix_type::projective_vector_type trans;
 			M.getTranslation(trans);
@@ -585,11 +561,12 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 			rot *= 180.0/M_PI;
 
 			object.append_attribute("folder") = symmeta.folder_id;
-			object.append_attribute("file") = animsymframemeta.getBuildFrame();//build_frame;//animsymframemeta.getBuildFrame();
+			object.append_attribute("file") = instance.getBuildFrame();//build_frame;//animsymframemeta.getBuildFrame();
 			object.append_attribute("x") = trans[0];
 			object.append_attribute("y") = -trans[1];
 			object.append_attribute("scale_x") = scale_x;
 			object.append_attribute("scale_y") = scale_y;
 			object.append_attribute("angle") = rot;
+		}
 	}
 }

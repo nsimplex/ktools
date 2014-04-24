@@ -23,6 +23,7 @@ set( krane_LIBS "pugixml" )
 
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
+include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckTypeSize)
@@ -78,17 +79,17 @@ list( APPEND ktech_LIBS "${COMMON_LIBS}" )
 list( APPEND krane_LIBS "${COMMON_LIBS}" )
 
 
-CHECK_INCLUDE_FILES (cstddef HAVE_CSTDDEF)
+CHECK_INCLUDE_FILE_CXX (cstddef HAVE_CSTDDEF)
 #
-CHECK_INCLUDE_FILES (stddef.h HAVE_STDDEF_H)
-CHECK_INCLUDE_FILES (stdint.h HAVE_STDINT_H)
-CHECK_INCLUDE_FILES (inttypes.h HAVE_INTTYPES_H)
-CHECK_INCLUDE_FILES (sys/types.h HAVE_SYS_TYPES_H)
+CHECK_INCLUDE_FILE (stddef.h HAVE_STDDEF_H)
+CHECK_INCLUDE_FILE (stdint.h HAVE_STDINT_H)
+CHECK_INCLUDE_FILE (inttypes.h HAVE_INTTYPES_H)
+CHECK_INCLUDE_FILE (sys/types.h HAVE_SYS_TYPES_H)
 #
-CHECK_INCLUDE_FILES (strstream HAVE_STRSTREAM)
-CHECK_INCLUDE_FILES (strstream.h HAVE_STRSTREAM_H)
+CHECK_INCLUDE_FILE_CXX (strstream HAVE_STRSTREAM)
+CHECK_INCLUDE_FILE_CXX (strstream.h HAVE_STRSTREAM_H)
 #
-CHECK_INCLUDE_FILES (sstream HAVE_SSTREAM)
+CHECK_INCLUDE_FILE_CXX (sstream HAVE_SSTREAM)
 #
 if(HAVE_STRSTREAM OR HAVE_STRSTREAM_H)
 	set(HAVE_CLASS_STRSTREAM TRUE)
@@ -111,7 +112,9 @@ endif()
 #
 CHECK_TYPE_SIZE("long long" LONG_LONG)
 #
+set(CMAKE_EXTRA_INCLUDE_FILES "stdio.h")
 CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+set(CMAKE_EXTRA_INCLUDE_FILES)
 #
 set(CMAKE_EXTRA_INCLUDE_FILES "sys/stat.h")
 CHECK_TYPE_SIZE("mode_t" MODE_T)
@@ -120,14 +123,16 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 CHECK_CXX_SOURCE_COMPILES (
   "int test (void *restrict x); int main (void) {return 0;}"
 	HAVE_RESTRICT) 
-#
-CHECK_C_SOURCE_COMPILES (
-  "int test (void *__restrict x); int main (void) {return 0;}"
-	HAVE_UURESTRICT) 
-#
-CHECK_C_SOURCE_COMPILES (
-  "int test (void *__restrict__ x); int main (void) {return 0;}"
-	HAVE_UURESTRICTUU) 
+if(NOT HAVE_RESTRICT)
+	CHECK_CXX_SOURCE_COMPILES (
+	  "int test (void *__restrict x); int main (void) {return 0;}"
+		HAVE___RESTRICT) 
+	if(NOT HAVE___RESTRICT)
+		CHECK_CXX_SOURCE_COMPILES (
+		  "int test (void *__restrict__ x); int main (void) {return 0;}"
+			HAVE___RESTRICT__) 
+	endif()
+endif()
 #
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )

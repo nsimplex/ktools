@@ -71,7 +71,6 @@ namespace Krane {
 					atlas_bbox.intersect(bbox_type(0, 0, 1, 1));
 				}
 
-			public:
 				/*
 				 * This is the initial position of this frame as an animation frame.
 				 * (i.e., this times the framerate is the initial instant it is shown).
@@ -91,6 +90,23 @@ namespace Krane {
 				 */
 				bbox_type bbox;
 
+			public:
+				uint32_t getAnimationFrameNumber() const {
+					return framenum;
+				}
+
+				uint32_t getDuration() const {
+					return duration;
+				}
+
+				bbox_type& getBoundingBox() {
+					return bbox;
+				}
+
+				const bbox_type& getBoundingBox() const {
+					return bbox;
+				}
+			
 				/*
 				 * Bounding box of the corresponding atlas region, in UV coordinates.
 				 */
@@ -157,6 +173,7 @@ namespace Krane {
 					return p;
 				}
 
+			private:
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, int verbosity);
 			};
@@ -238,6 +255,7 @@ namespace Krane {
 				return count;
 			}
 
+		private:
 			std::istream& loadPre(std::istream& in, int verbosity);
 			std::istream& loadPost(std::istream& in, int verbosity);
 		};
@@ -337,6 +355,7 @@ namespace Krane {
 			}
 		}
 
+	private:
 		std::istream& load(std::istream& in, int verbosity);
 	};
 

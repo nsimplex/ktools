@@ -168,16 +168,8 @@ namespace {
 		xml_node timeline;
 		uint32_t id; // timeline id
 
-		int dupeness; // for dupes
-		bool is_dupe;
-
-		void setDupedName() {
-			DataFormatter fmt;
-			timeline.attribute("name") = fmt("%s_%d", timeline.attribute("name").as_string(), dupeness);
-		}
-
 	public:
-		AnimationSymbolMetadata(int _dupecnt) : timeline(), id(0), dupeness(_dupecnt), is_dupe(_dupecnt > 0) {}
+		AnimationSymbolMetadata() : timeline(), id(0) {}
 
 		/*
 		 * If no timeline node has been created yet, creates one and sets its attributes.
@@ -191,20 +183,10 @@ namespace {
 				timeline = animation.append_child("timeline");
 				timeline.append_attribute("id") = id;
 				timeline.append_attribute("name") = elem.getName().c_str();
-
-				if(is_dupe) {
-					setDupedName();
-				}
+				assert(timeline);
 			}
 			cout << "Initializing metadata for animation " << animation.attribute("name").as_string() << ", element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", layer name " << elem.getLayerName() << endl;
 			push_back( AnimationSymbolFrameMetadata(elem, start_time) );
-		}
-
-		void setDupe() {
-			is_dupe = true;
-			if(timeline) {
-				setDupedName();
-			}
 		}
 
 		xml_node getTimeline() const {
@@ -241,8 +223,6 @@ namespace {
 		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t start_time, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
 			symbolmeta_list& L = (*this)[symbolHash];
 
-			const int dupeness = int(L.size());
-
 			for(symbolmeta_list::iterator it = L.begin(); it != L.end(); ++it) {
 				AnimationSymbolMetadata& animsymmeta = *it;
 
@@ -254,13 +234,9 @@ namespace {
 				}
 			}
 
-			L.push_back( AnimationSymbolMetadata(dupeness) );
+			L.push_back( AnimationSymbolMetadata() );
 			AnimationSymbolMetadata& animsymmeta = L.back();
 			animsymmeta.initialize(animation, current_timeline_id, start_time, bframemeta, elem);
-
-			if(dupeness > 0) {
-				L.front().setDupe();
-			}
 
 			return animsymmeta;
 		}

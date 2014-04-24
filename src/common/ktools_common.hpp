@@ -65,9 +65,9 @@ int snprintf(char *str, size_t n, const char *fmt, ...);
 #ifndef RESTRICT
 #	if defined(HAVE_RESTRICT)
 #		define RESTRICT restrict
-#	elif defined(HAVE_UURESTRICT)
+#	elif defined(HAVE___RESTRICT)
 #		define RESTRICT __restrict
-#	elif defined(HAVE_UURESTRICTUU)
+#	elif defined(HAVE___RESTRICT__)
 #		define RESTRICT __restrict__
 #	else
 #		define RESTRICT

@@ -52,14 +52,27 @@ namespace KTools {
 		Endianess target_endianness;
 
 
+		static inline void read_fail() {
+			throw KToolsError("IO error: failed to read data from stream. It might be corrupt.");
+		}
+
+		static inline void write_fail() {
+			throw KToolsError("IO error: failed to write data to stream.");
+		}
+
+
 		template<typename T>
 		static void raw_read_value(std::istream& in, T& n) {
-			in.read( reinterpret_cast<char*>( &n ), sizeof( n ) );
+			if(!in.read( reinterpret_cast<char*>( &n ), sizeof( n ) )) {
+				read_fail();
+			}
 		}
 
 		template<typename T>
-		static void raw_write_value(std::ostream& out, T n) {
-			out.write( reinterpret_cast<const char*>( &n ), sizeof( n ) );
+		static void raw_write_value(std::ostream& out, const T n) {
+			if(!out.write( reinterpret_cast<const char*>( &n ), sizeof( n ) )) {
+				write_fail();
+			}
 		}
 
 		/*
@@ -175,7 +188,7 @@ namespace KTools {
 		}
 
 		template<typename T>
-		static void raw_write_integer(std::ostream& out, T n) {
+		static void raw_write_integer(std::ostream& out, const T n) {
 			staticAssertIntegral<T>();
 			raw_write_value(out, n);
 		}
@@ -194,7 +207,7 @@ namespace KTools {
 		}
 
 		template<typename T>
-		inline void write_integer(std::ostream& out, T n) const {
+		inline void write_integer(std::ostream& out, const T n) const {
 			staticAssertIntegral<T>();
 			write_ordered_value(out, n);
 		}
@@ -206,9 +219,61 @@ namespace KTools {
 		}
 
 		template<typename T>
-		inline void write_float(std::ostream& out, T x) const {
+		inline void write_float(std::ostream& out, const T x) const {
 			staticAssertFloating<T>();
 			write_ordered_value(out, x);
+		}
+
+		static inline void read_string(std::istream& in, std::string& str, const size_t len) {
+			char stack_buffer[1 << 15];
+			char *buffer;
+			if(len <= sizeof(stack_buffer)) {
+				buffer = stack_buffer;
+			}
+			else {
+				buffer = new char[len];
+			}
+
+			if(!in.read(buffer, len)) {
+				read_fail();
+			}
+
+			str.assign(buffer, len);
+
+			if(buffer != stack_buffer) {
+				delete[] buffer;
+			}
+		}
+
+		template<typename LengthType>
+		inline void read_len_string(std::istream& in, std::string& str) const {
+			LengthType len;
+			read_integer(in, len);
+			read_string(in, str, len);
+		}
+
+		template<typename LengthType>
+		inline void skip_len_string(std::istream& in) const {
+			LengthType len;
+			read_integer(in, len);
+			in.ignore(len);
+		}
+
+		/*
+		static inline void write_string(std::ostream& out, const std::string& str) {
+			if(!out.write(str.data(), str.length()) {
+				write_fail();
+			}
+		}
+		*/
+
+		template<typename LengthType>
+		inline void write_len_string(std::ostream& out, const std::string& str) const {
+			const LengthType len = LengthType(str.length());
+			write_integer(out, len);
+			if(!out.write(str.data(), len)) {
+				write_fail();
+			}
 		}
 	};
 }

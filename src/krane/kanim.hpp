@@ -69,6 +69,7 @@ namespace Krane {
 					return name;
 				}
 
+			private:
 				/*
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
@@ -119,6 +120,7 @@ namespace Krane {
 					return z;
 				}
 
+			private:
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
 			};
@@ -131,8 +133,8 @@ namespace Krane {
 
 			bbox_type bbox;
 
-			float getDuration() const {
-				return 1/parent->getFrameRate();
+			float_type getDuration() const {
+				return parent->getFrameDuration();
 			}
 
 			uint32_t countEvents() const {
@@ -143,6 +145,7 @@ namespace Krane {
 				return uint32_t(elements.size());
 			}
 
+		private:
 			std::istream& loadPre(std::istream& in, int verbosity);
 			std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
 		};
@@ -154,7 +157,7 @@ namespace Krane {
 		hash_t bank_hash;
 
 		uint8_t facing_byte;
-		float frame_rate;
+		float_type frame_rate;
 
 	public:
 		typedef std::vector<Frame> framelist_t;
@@ -164,12 +167,18 @@ namespace Krane {
 			return name;
 		}
 
-		const std::string& getFullName() const {
-			// TODO: implement this
-			return getName();
+		// Includes the facing direction suffix, if any.
+		void getFullName(std::string& fullname) const;
+
+		std::string getFullName() const {
+			std::string fullname;
+			getFullName(fullname);
+			return fullname;
 		}
 
 		void setName(const std::string& s) {
+			// TODO: if this is ever really used, fix it to extract
+			// the facing byte.
 			name = s;
 		}
 
@@ -189,12 +198,16 @@ namespace Krane {
 			return countFrames();
 		}
 
-		float getFrameRate() const {
+		float_type getFrameRate() const {
 			return frame_rate;
 		}
 
-		float getDuration() const {
-			return getFrameCount()/getFrameRate();
+		float_type getFrameDuration() const {
+			return 1/frame_rate;
+		}
+
+		float_type getDuration() const {
+			return getFrameCount()*getFrameDuration();
 		}
 
 		uint32_t countEvents() const {
@@ -217,10 +230,11 @@ namespace Krane {
 			return n;
 		}
 
+		virtual ~KAnim() {}
+
+	private:
 		std::istream& loadPre(std::istream& in, int verbosity);
 		std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
-
-		virtual ~KAnim() {}
 	};
 
 
