@@ -38,6 +38,9 @@ namespace {
 		computations_float_type pivot_x;
 		computations_float_type pivot_y;
 
+		int width;
+		int height;
+
 		// Animation frame number.
 		uint32_t anim_framenum;
 		uint32_t duration;
@@ -365,6 +368,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 
 	framemeta.pivot_x = pivot_x;
 	framemeta.pivot_y = pivot_y;
+	framemeta.width = w;
+	framemeta.height = h;
 	framemeta.anim_framenum = frame.getAnimationFrameNumber();
 	framemeta.duration = frame.getDuration();
 
@@ -524,9 +529,6 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 template<typename T>
 static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot, T& last_sign) {
 	rot = atan2(c, d);
-	if(!( -M_PI <= rot && rot <= M_PI )) {
-		cout << "ROT: " << rot << endl;
-	}
 
 	/*
 	scale_x = sqrt(a*a + b*b);
@@ -593,7 +595,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 		timeline_key.append_attribute("id") = key_id++;//build_frame; // This changed for deduplication.
 		timeline_key.append_attribute("time") = animsymframemeta.getStartTime();//tomilli(frame_duration*bframemeta.duration);//tomilli(frame_duration*bframemeta.duration);
-		timeline_key.append_attribute("spin") = 0;
+		timeline_key.append_attribute("spin") = 1;
 
 
 		xml_node object = timeline_key.append_child("object");
