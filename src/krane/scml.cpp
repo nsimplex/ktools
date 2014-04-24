@@ -412,7 +412,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 
 	animation.append_attribute("id") = animation_id;
 	animation.append_attribute("name") = A.getFullName().c_str(); // BUILD_PLAYER ?
-	animation.append_attribute("length") = tomilli(A.getDuration());
+	animation.append_attribute("length") = tomilli(A.getDuration() - frame_duration); // keep the subtraction?
 
 	xml_node mainline = animation.append_child("mainline");
 
@@ -514,16 +514,54 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 
 /*
  * Decomposes (approximately if this is not possible exactly) a matrix into xy scalings and a rotation angle in radians.
+ *
+ * In Spriter, scaling is applied before rotation.
+ *
+ * Since the decomposition is not unique, the x scale is imposed to always be non-negative.
+ *
+ * Recall that the y coordinate is flipped in the conversion.
  */
 template<typename T>
-static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot) {
-	scale_x = sqrt(a*a + b*b);
-	if(a < 0) scale_x = -scale_x;
-
-	scale_y = sqrt(c*c + d*d);
-	if(d < 0) scale_y = -scale_y;
-
+static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot, T& last_sign) {
 	rot = atan2(c, d);
+	if(!( -M_PI <= rot && rot <= M_PI )) {
+		cout << "ROT: " << rot << endl;
+	}
+
+	/*
+	scale_x = sqrt(a*a + b*b);
+	scale_y = sqrt(c*c + d*d);
+	*/
+
+	scale_x = sqrt(a*a + c*c);
+
+	scale_y = sqrt(b*b + d*d);
+
+	if(fabs(d) < 0.001) {
+		scale_y *= last_sign;
+		return;
+	}
+
+	if(d < 0) {
+		if(fabs(rot) < M_PI/2) {
+			scale_y = -scale_y;
+			last_sign = -1;
+		}
+		else {
+			last_sign = 1;
+		}
+	}
+	else {
+		if(rot < 0) {
+			if(fabs(rot) > M_PI/2) {
+				scale_y = -scale_y;
+				last_sign = -1;
+			}
+			else {
+				last_sign = 1;
+			}
+		}
+	}
 }
 
 /*
@@ -539,6 +577,14 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 	xml_node timeline = animsymmeta.getTimeline();
 
+	/*
+	 * Stores the last sign adopted by the matrix decomposition.
+	 * (how this sign is used and what it refers to is left for the function to decide).
+	 *
+	 * Used to help preserve continuity.
+	 */
+	computations_float_type last_sign = 1;
+
 	int key_id = 0;
 	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
 		const AnimationSymbolFrameMetadata& animsymframemeta = *animsymframeiter;
@@ -550,26 +596,26 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		timeline_key.append_attribute("spin") = 0;
 
 
-			xml_node object = timeline_key.append_child("object");
+		xml_node object = timeline_key.append_child("object");
 
-			const matrix_type& M = animsymframemeta.getMatrix();
+		const matrix_type& M = animsymframemeta.getMatrix();
 
-			matrix_type::projective_vector_type trans;
-			M.getTranslation(trans);
+		matrix_type::projective_vector_type trans;
+		M.getTranslation(trans);
 
-			computations_float_type scale_x, scale_y, rot;
-			decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot);
-			if(rot < 0) {
-				rot += 2*M_PI;
-			}
-			rot *= 180.0/M_PI;
+		computations_float_type scale_x, scale_y, rot;
+		decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot, last_sign);
+		if(rot < 0) {
+			rot += 2*M_PI;
+		}
+		rot *= 180.0/M_PI;
 
-			object.append_attribute("folder") = symmeta.folder_id;
-			object.append_attribute("file") = animsymframemeta.getBuildFrame();//build_frame;//animsymframemeta.getBuildFrame();
-			object.append_attribute("x") = trans[0];
-			object.append_attribute("y") = -trans[1];
-			object.append_attribute("scale_x") = scale_x;
-			object.append_attribute("scale_y") = scale_y;
-			object.append_attribute("angle") = rot;
+		object.append_attribute("folder") = symmeta.folder_id;
+		object.append_attribute("file") = animsymframemeta.getBuildFrame();//build_frame;//animsymframemeta.getBuildFrame();
+		object.append_attribute("x") = trans[0];
+		object.append_attribute("y") = -trans[1];
+		object.append_attribute("scale_x") = scale_x;
+		object.append_attribute("scale_y") = scale_y;
+		object.append_attribute("angle") = rot;
 	}
 }
