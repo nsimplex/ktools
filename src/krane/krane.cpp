@@ -76,7 +76,17 @@ int main(int argc, char* argv[]) {
 				throw Error("failed to create dir.");
 			}
 
-			it->second.write(outpath);
+			Magick::Image img = it->second;
+
+			/*
+			img.type(Magick::TrueColorMatteType);
+			img.colorSpace(Magick::sRGBColorspace);
+			*/
+
+			// png color type 6 means RGBA
+			img.defineValue("png", "color-type", "6");
+
+			img.write(outpath);
 		}
 
 		cout << "Splitting animation banks..." << endl;

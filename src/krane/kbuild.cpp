@@ -3,6 +3,10 @@
 using namespace std;
 
 namespace Krane {
+	// This is the scale applied by the scml compiler in the mod tools.
+	const KBuild::float_type KBuild::MODTOOLS_SCALE = 1.0/3;
+
+
 	Magick::Image KBuild::Symbol::Frame::getImage() const {
 		using namespace Magick;
 		using namespace std;
@@ -60,9 +64,16 @@ namespace Krane {
 
 		// Returned image (clipped quad).
 		Image img = Image(geo, "transparent");
-		img.magick("RGBA");
 		img.clipMask(mask);
 		img.composite( quad, Geometry(0, 0), OverCompositeOp );
+
+
+		// This is to reverse the scaling down applied by the mod tools' scml compiler.
+		Geometry scaling_geo;
+		scaling_geo.percent(true);
+		scaling_geo.width(100/MODTOOLS_SCALE);
+		scaling_geo.height(100/MODTOOLS_SCALE);
+		img.resize(scaling_geo);
 
 		return img;
 	}

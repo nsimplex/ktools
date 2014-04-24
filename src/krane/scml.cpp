@@ -10,13 +10,8 @@ using namespace pugi;
 
 /***********************************************************************/
 
-/*
- * Global linear scale (applied to dimensions, translations, etc.).
- *
- * This is NOT arbitrary, being needed for translations and positions to
- * match the expected behaviour. Hence it is not configurable.
- */
-static const computations_float_type SCALE = 1.0/3;
+// This is the scale applied by the scml compiler in the mod tools.
+static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
 
 
 /***********************************************************************/
@@ -132,14 +127,12 @@ namespace {
 		}
 
 		void initialize(const KAnim::Frame::Element& elem, uint32_t _start_time) {
-			cout << "initialize\n";
 			if(M != NULL) {
 				throw logic_error( ("Reinitializing AnimationSymbolFrameMetadata for frame element " + elem.getName() + ".").c_str() );
 			}
 			M = &elem.getMatrix();
 			build_frame = elem.getBuildFrame();
 			start_time = _start_time;
-			cout << "initialized\n";
 		}
 
 		const matrix_type& getMatrix() const {
@@ -196,11 +189,11 @@ namespace {
 					setDupedName();
 				}
 			}
-			cout << "Initializing metadata for animation " << animation.attribute("name").as_string() << ", element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", layer name " << elem.getLayerName() << endl;
 			push_back( AnimationSymbolFrameMetadata(elem, start_time) );
 		}
 
 		void setDupe() {
+			if(is_dupe) return;
 			is_dupe = true;
 			if(timeline) {
 				setDupedName();
@@ -335,10 +328,6 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 
 	const uint32_t folder_id = s.folder_id++;
 
-	// DEBUG
-	cout << "Exporting symbol " << sym.getName() << endl;
-	// END DEBUG
-
 	xml_node folder = spriter_data.append_child("folder");
 
 	folder.append_attribute("id") = folder_id;
@@ -359,12 +348,6 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 	typedef KBuild::float_type float_type;
 
 	const uint32_t file_id = s.file_id++;
-
-	// DEBUG
-	cout << "\tExporting frame #" << file_id << endl;
-	cout << "\t\tframenum: " << frame.getAnimationFrameNumber() << endl;
-	cout << "\t\tduration: " << frame.getDuration() << endl;
-	// END DEBUG
 
 	xml_node file = folder.append_child("file");
 
@@ -389,6 +372,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 	file.append_attribute("name") = frame.getUnixPath().c_str();
 	file.append_attribute("width") = w;
 	file.append_attribute("height") = h;
+	file.append_attribute("original_width") = w/MODTOOLS_SCALE;
+	file.append_attribute("original_height") = h/MODTOOLS_SCALE;
 	file.append_attribute("pivot_x") = pivot_x;
 	file.append_attribute("pivot_y") = pivot_y;
 }
@@ -462,8 +447,6 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 	mainline_key.append_attribute("id") = key_id;
 	mainline_key.append_attribute("time") = start_time;
 
-	cout << "At animation frame " << key_id << endl;
-
 	AnimationFrameExporterState local_s(key_id);
 
 	for(KAnim::Frame::elementlist_t::const_reverse_iterator elemit = frame.elements.rbegin(); elemit != frame.elements.rend(); ++elemit) {
@@ -482,8 +465,6 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 		}
 
 		const BuildSymbolFrameMetadata& bframemeta = symmeta[build_frame];
-
-		cout << "Initializing child for bframemeta.duration = " << bframemeta.duration << endl;
 
 		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, bframemeta, elem);
 
@@ -575,7 +556,6 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 			matrix_type::projective_vector_type trans;
 			M.getTranslation(trans);
-			trans *= SCALE;
 
 			computations_float_type scale_x, scale_y, rot;
 			decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot);
