@@ -75,8 +75,7 @@ namespace Krane {
 				}
 
 				/*
-				 * This is the initial position of this frame as an animation frame.
-				 * (i.e., this times the framerate is the initial instant it is shown).
+				 * This is the sum of the durations of frames coming before.
 				 *
 				 * Counts from 0.
 				 */
@@ -84,7 +83,6 @@ namespace Krane {
 
 				/*
 				 * This is the time length of this frame measured in animation frames.
-				 * (i.e., this times the framerate is the time length it is shown)
 				 */
 				uint32_t duration;
 
@@ -94,7 +92,7 @@ namespace Krane {
 				bbox_type bbox;
 
 			public:
-				uint32_t getAnimationFrameNumber() const {
+				uint32_t getFrameNumber() const {
 					return framenum;
 				}
 
@@ -196,12 +194,47 @@ namespace Krane {
 
 			framelist_t frames;
 
+		private:
+			// Maps frame numbers to indexes of the frames vector.
+			typedef std::map<uint32_t, uint32_t> frameNumberMap_t;
+			frameNumberMap_t frameNumberMap;
+
+			void update_framenumbermap() {
+				frameNumberMap.clear();
+				
+				const uint32_t nframes = uint32_t(frames.size());
+				for(uint32_t i = 0; i < nframes; i++) {
+					frameNumberMap.insert( std::make_pair(frames[i].getFrameNumber(), i) );
+				}
+			}
+
+		public:
 			void getName(std::string& s) const {
 				s = name;
 			}
 
 			const std::string& getName() const {
 				return name;
+			}
+
+			/*
+			 * Receives a frame number (as in the attribute frame number of Frame)
+			 * and returns the index in the frames vector of the corresponding frame.
+			 */
+			uint32_t getFrameIndex(uint32_t framenum) const {
+				frameNumberMap_t::const_iterator match = frameNumberMap.lower_bound(framenum);
+				if(match == frameNumberMap.end()) {
+					throw std::logic_error("Frame number has no lower bound in map.");
+				}
+				return match->second;
+			}
+
+			const Frame& getFrame(uint32_t framenum) const {
+				return frames[getFrameIndex(framenum)];
+			}
+
+			Frame& getFrame(uint32_t framenum) {
+				return frames[getFrameIndex(framenum)];
 			}
 
 			// This counts the number of symbol frames (i.e., distinct
@@ -352,7 +385,9 @@ namespace Krane {
 			typedef Symbol::framelist_t::const_iterator frame_iter;
 
 			for(symbol_iter symit = symbols.begin(); symit != symbols.end(); ++symit) {
+				std::cout << symit->second.getName() << " has " << symit->second.frames.size() << " frames" << std::endl;
 				for(frame_iter frit = symit->second.frames.begin(); frit != symit->second.frames.end(); ++frit) {
+					std::cout << "got path " << frit->getPath() << std::endl;
 					*it++ = std::make_pair(frit->getPath(), frit->getImage());
 				}
 			}

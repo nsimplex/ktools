@@ -38,18 +38,31 @@ namespace {
 		computations_float_type pivot_x;
 		computations_float_type pivot_y;
 
+		/*
 		int width;
 		int height;
+		computations_float_type x;
+		computations_float_type y;
+		*/
 
-		// Animation frame number.
-		uint32_t anim_framenum;
+		uint32_t framenum;
 		uint32_t duration;
 	};
 
 	struct BuildSymbolMetadata : public std::vector<BuildSymbolFrameMetadata> {
 		uint32_t folder_id;
+		const KBuild::Symbol* symbol;
 
-		// Timeline id in
+		uint32_t getFileId(uint32_t build_framenum) const {
+			if(symbol == NULL) {
+				throw logic_error("Attempt to access BuildSymbolMetadata object without prior setting of the symbol pointer.");
+			}
+			return symbol->getFrameIndex(build_framenum);
+		}
+
+		const BuildSymbolFrameMetadata& getFrameMetadata(uint32_t build_framenum) const {
+			return (*this)[getFileId(build_framenum)];
+		}
 	};
 
 	// The map keys are the build symbol names' hashes.
@@ -331,6 +344,8 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 
 	const uint32_t folder_id = s.folder_id++;
 
+	cout << "Exporting build symbol " << sym.getName() << endl;
+
 	xml_node folder = spriter_data.append_child("folder");
 
 	folder.append_attribute("id") = folder_id;
@@ -339,12 +354,14 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 	BuildSymbolExporterState local_s;
 
 	symmeta.resize(sym.frames.size());
+	cout << "num frames: " << sym.frames.size() << endl;
 	for(frame_iterator it = sym.frames.begin(); it != sym.frames.end(); ++it) {
 		const KBuild::Symbol::Frame& frame = *it;
 		exportBuildSymbolFrame(folder, local_s, symmeta[local_s.file_id], frame);
 	}
 
 	symmeta.folder_id = folder_id;
+	symmeta.symbol = &sym;
 }
 
 static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s, BuildSymbolFrameMetadata& framemeta, const KBuild::Symbol::Frame& frame) {
@@ -353,6 +370,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 	const uint32_t file_id = s.file_id++;
 
 	xml_node file = folder.append_child("file");
+
+	cout << "Exporting build symbol frame #" << file_id << ": " << frame.getUnixPath() << endl;
 
 	const KBuild::Symbol::Frame::bbox_type& bbox = frame.getBoundingBox();
 
@@ -368,15 +387,19 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 
 	framemeta.pivot_x = pivot_x;
 	framemeta.pivot_y = pivot_y;
+	/*
 	framemeta.width = w;
 	framemeta.height = h;
-	framemeta.anim_framenum = frame.getAnimationFrameNumber();
+	framemeta.x = x;
+	framemeta.y = y;
+	*/
+	framemeta.framenum = frame.getFrameNumber();
 	framemeta.duration = frame.getDuration();
 
 	file.append_attribute("id") = file_id;
 	file.append_attribute("name") = frame.getUnixPath().c_str();
-	file.append_attribute("width") = w;
-	file.append_attribute("height") = h;
+	file.append_attribute("width") = w;///MODTOOLS_SCALE;
+	file.append_attribute("height") = h;///MODTOOLS_SCALE;
 	file.append_attribute("original_width") = w/MODTOOLS_SCALE;
 	file.append_attribute("original_height") = h/MODTOOLS_SCALE;
 	file.append_attribute("pivot_x") = pivot_x;
@@ -411,6 +434,8 @@ static void exportAnimationBank(xml_node spriter_data, AnimationBankCollectionEx
 static void exportAnimation(xml_node entity, AnimationBankExporterState& s, const BuildMetadata& bmeta, const KAnim& A) {
 	const uint32_t animation_id = s.animation_id++;
 	const computations_float_type frame_duration = A.getFrameDuration();
+
+	cout << "Exporting animation: " << A.getName() << endl;
 
 	xml_node animation = entity.append_child("animation");
 	AnimationMetadata animmeta(animation);
@@ -452,6 +477,8 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 	mainline_key.append_attribute("id") = key_id;
 	mainline_key.append_attribute("time") = start_time;
 
+	cout << "Exporting animation frame " << key_id << endl;
+
 	AnimationFrameExporterState local_s(key_id);
 
 	for(KAnim::Frame::elementlist_t::const_reverse_iterator elemit = frame.elements.rbegin(); elemit != frame.elements.rend(); ++elemit) {
@@ -465,11 +492,8 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 		const BuildSymbolMetadata& symmeta = symmeta_match->second;
 
 		const uint32_t build_frame = elem.getBuildFrame();
-		if(build_frame >= symmeta.size()) {
-			continue;
-		}
 
-		const BuildSymbolFrameMetadata& bframemeta = symmeta[build_frame];
+		const BuildSymbolFrameMetadata& bframemeta = symmeta.getFrameMetadata(build_frame);
 
 		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, bframemeta, elem);
 
@@ -493,6 +517,8 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 		s.last_sort_order = sort_order;
 	}
 
+	cout << "Exporting animation frame element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", key id " << animsymmeta.getTimelineId() << endl;
+
 
 	xml_node object_ref = mainline_key.append_child("object_ref");
 
@@ -506,8 +532,8 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 	*/
 	object_ref.append_attribute("abs_x") = 0;
 	object_ref.append_attribute("abs_y") = 0;
-	object_ref.append_attribute("abs_pivot_x") = bframemeta.pivot_x;
-	object_ref.append_attribute("abs_pivot_y") = bframemeta.pivot_y;
+	object_ref.append_attribute("abs_pivot_x") = bframemeta.pivot_x;//*MODTOOLS_SCALE;
+	object_ref.append_attribute("abs_pivot_y") = bframemeta.pivot_y;//*MODTOOLS_SCALE;
 	object_ref.append_attribute("abs_angle") = 0; // 360?
 	object_ref.append_attribute("abs_scale_x") = 1;
 	object_ref.append_attribute("abs_scale_y") = 1;
@@ -613,7 +639,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		rot *= 180.0/M_PI;
 
 		object.append_attribute("folder") = symmeta.folder_id;
-		object.append_attribute("file") = animsymframemeta.getBuildFrame();//build_frame;//animsymframemeta.getBuildFrame();
+		object.append_attribute("file") = symmeta.getFileId(animsymframemeta.getBuildFrame());//build_frame;//animsymframemeta.getBuildFrame();
 		object.append_attribute("x") = trans[0];
 		object.append_attribute("y") = -trans[1];
 		object.append_attribute("scale_x") = scale_x;

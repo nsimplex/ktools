@@ -214,6 +214,7 @@ namespace Krane {
 				throw(KToolsError("Failed to load symbol frame."));
 			}
 		}
+		update_framenumbermap();
 
 		return in;
 	}
