@@ -13,7 +13,7 @@ using namespace pugi;
 // This is the scale applied by the scml compiler in the mod tools.
 //static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
 
-static const computations_float_type TIME_SCALE = 2;
+static const computations_float_type TIME_SCALE = 1;
 
 /***********************************************************************/
 
@@ -44,15 +44,8 @@ namespace {
 		computations_float_type pivot_x;
 		computations_float_type pivot_y;
 
-		/*
-		int width;
-		int height;
-		computations_float_type x;
-		computations_float_type y;
-		*/
-
-		uint32_t framenum;
-		uint32_t duration;
+		//uint32_t framenum;
+		//uint32_t duration;
 	};
 
 	struct BuildSymbolMetadata : public std::vector<BuildSymbolFrameMetadata> {
@@ -175,11 +168,11 @@ namespace {
 
 	/*
 	 * Metadata on build symbols as animation frame elements.
-	 * Keys are the animation frame ids.
+	 * Corresponds to a timeline, listing keys.
 	 *
 	 * Local to an animation.
 	 */
-	class AnimationSymbolMetadata : public list<AnimationSymbolFrameMetadata> {
+	class AnimationSymbolMetadata : public deque<AnimationSymbolFrameMetadata> {
 		xml_node timeline;
 		uint32_t id; // timeline id
 
@@ -199,7 +192,7 @@ namespace {
 		 *
 		 * Also initializes corresponding element indexed by the elem build frame.
 		 */
-		void initialize(xml_node animation, uint32_t& current_timeline_id, uint32_t start_time, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
+		void initialize(xml_node animation, uint32_t& current_timeline_id, uint32_t start_time, const KAnim::Frame::Element& elem) {
 			//assert(anim_frame_id < size());
 			if(!timeline) {
 				id = current_timeline_id++;
@@ -243,17 +236,20 @@ namespace {
 
 	/*
 	 * Maps build symbol hashes to their metadata (as animation frame elements).
+	 *
+	 * Each value is a list, where a new element is added when a new timeline is required
+	 * (due to an object appearing multiple times, such as machine_leg for the researchlab).
 	 */
 	class AnimationMetadata : public map<hash_t, list<AnimationSymbolMetadata> > {
 		xml_node animation;
 
 	public:
-		typedef list<AnimationSymbolMetadata> symbolmeta_list;
+		typedef value_type::second_type symbolmeta_list;
 		typedef symbolmeta_list list_type;
 
 		AnimationMetadata(xml_node _animation) : animation(_animation) {}
 
-		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t start_time, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
+		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t start_time, const KAnim::Frame::Element& elem) {
 			symbolmeta_list& L = (*this)[symbolHash];
 
 			const int dupeness = int(L.size());
@@ -264,14 +260,14 @@ namespace {
 				assert( ! animsymmeta.empty() );
 
 				if(animsymmeta.back().getStartTime() < start_time) {
-					animsymmeta.initialize(animation, current_timeline_id, start_time, bframemeta, elem);
+					animsymmeta.initialize(animation, current_timeline_id, start_time, elem);
 					return animsymmeta;
 				}
 			}
 
 			L.push_back( AnimationSymbolMetadata(dupeness) );
 			AnimationSymbolMetadata& animsymmeta = L.back();
-			animsymmeta.initialize(animation, current_timeline_id, start_time, bframemeta, elem);
+			animsymmeta.initialize(animation, current_timeline_id, start_time, elem);
 
 			if(dupeness > 0) {
 				L.front().setDupe();
@@ -392,14 +388,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 
 	framemeta.pivot_x = pivot_x;
 	framemeta.pivot_y = pivot_y;
-	/*
-	framemeta.width = w;
-	framemeta.height = h;
-	framemeta.x = x;
-	framemeta.y = y;
-	*/
-	framemeta.framenum = frame.getFrameNumber();
-	framemeta.duration = frame.getDuration();
+	//framemeta.framenum = frame.getFrameNumber();
+	//framemeta.duration = frame.getDuration();
 
 	file.append_attribute("id") = file_id;
 	file.append_attribute("name") = frame.getUnixPath().c_str();
@@ -496,11 +486,7 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 		const BuildSymbolMetadata& symmeta = symmeta_match->second;
 
-		const uint32_t build_frame = elem.getBuildFrame();
-
-		const BuildSymbolFrameMetadata& bframemeta = symmeta.getFrameMetadata(build_frame);
-
-		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, bframemeta, elem);
+		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, elem);
 
 		exportAnimationFrameElement(mainline_key, local_s, animsymmeta, symmeta, elem);
 	}
