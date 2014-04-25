@@ -70,9 +70,9 @@ namespace Krane {
 
 		// This is to reverse the scaling down applied by the mod tools' scml compiler.
 		Geometry scaling_geo;
-		scaling_geo.percent(true);
-		scaling_geo.width(100/MODTOOLS_SCALE);
-		scaling_geo.height(100/MODTOOLS_SCALE);
+		scaling_geo.aspect(true);
+		scaling_geo.width(bbox.w());
+		scaling_geo.height(bbox.h());
 		img.resize(scaling_geo);
 
 		return img;

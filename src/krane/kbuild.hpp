@@ -222,11 +222,16 @@ namespace Krane {
 			 * and returns the index in the frames vector of the corresponding frame.
 			 */
 			uint32_t getFrameIndex(uint32_t framenum) const {
-				frameNumberMap_t::const_iterator match = frameNumberMap.lower_bound(framenum);
-				if(match == frameNumberMap.end()) {
-					throw std::logic_error("Frame number has no lower bound in map.");
+				if(frameNumberMap.empty()) {
+					throw std::logic_error("querying an empty build symbol frame number map.");
 				}
-				return match->second;
+				frameNumberMap_t::const_iterator match = frameNumberMap.upper_bound(framenum);
+				if(match == frameNumberMap.end()) {
+					return frameNumberMap.rbegin()->second;
+				}
+				else {
+					return (--match)->second;
+				}
 			}
 
 			const Frame& getFrame(uint32_t framenum) const {
@@ -385,9 +390,7 @@ namespace Krane {
 			typedef Symbol::framelist_t::const_iterator frame_iter;
 
 			for(symbol_iter symit = symbols.begin(); symit != symbols.end(); ++symit) {
-				std::cout << symit->second.getName() << " has " << symit->second.frames.size() << " frames" << std::endl;
 				for(frame_iter frit = symit->second.frames.begin(); frit != symit->second.frames.end(); ++frit) {
-					std::cout << "got path " << frit->getPath() << std::endl;
 					*it++ = std::make_pair(frit->getPath(), frit->getImage());
 				}
 			}

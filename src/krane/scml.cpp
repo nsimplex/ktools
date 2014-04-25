@@ -11,8 +11,9 @@ using namespace pugi;
 /***********************************************************************/
 
 // This is the scale applied by the scml compiler in the mod tools.
-static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
+//static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
 
+static const computations_float_type TIME_SCALE = 2;
 
 /***********************************************************************/
 
@@ -21,12 +22,17 @@ static void sanitize_stream(std::ostream& out) {
 	out.imbue(locale::classic());
 }
 
+template<typename T>
+static inline T normalize_time(T t) {
+	return TIME_SCALE*t;
+}
+
 static inline int tomilli(float x) {
-	return int(ceilf(1000.0f*x));
+	return int(ceilf(1000.0f*normalize_time(x)));
 }
 
 static inline int tomilli(double x) {
-	return int(ceil(1000.0*x));
+	return int(ceil(1000.0*normalize_time(x)));
 }
 
 
@@ -295,7 +301,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 
 static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, AnimationMetadata& animmeta, const BuildMetadata& bmeta, const KAnim::Frame& frame);
 
-static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem);
+static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolMetadata& symmeta, const KAnim::Frame::Element& elem);
 
 static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, const AnimationSymbolMetadata& animsymmeta);
 
@@ -344,7 +350,7 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 
 	const uint32_t folder_id = s.folder_id++;
 
-	cout << "Exporting build symbol " << sym.getName() << endl;
+	//cout << "Exporting build symbol " << sym.getName() << endl;
 
 	xml_node folder = spriter_data.append_child("folder");
 
@@ -354,7 +360,6 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 	BuildSymbolExporterState local_s;
 
 	symmeta.resize(sym.frames.size());
-	cout << "num frames: " << sym.frames.size() << endl;
 	for(frame_iterator it = sym.frames.begin(); it != sym.frames.end(); ++it) {
 		const KBuild::Symbol::Frame& frame = *it;
 		exportBuildSymbolFrame(folder, local_s, symmeta[local_s.file_id], frame);
@@ -371,7 +376,7 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 
 	xml_node file = folder.append_child("file");
 
-	cout << "Exporting build symbol frame #" << file_id << ": " << frame.getUnixPath() << endl;
+	//cout << "Exporting build symbol frame #" << file_id << ": " << frame.getUnixPath() << endl;
 
 	const KBuild::Symbol::Frame::bbox_type& bbox = frame.getBoundingBox();
 
@@ -400,8 +405,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 	file.append_attribute("name") = frame.getUnixPath().c_str();
 	file.append_attribute("width") = w;///MODTOOLS_SCALE;
 	file.append_attribute("height") = h;///MODTOOLS_SCALE;
-	file.append_attribute("original_width") = w/MODTOOLS_SCALE;
-	file.append_attribute("original_height") = h/MODTOOLS_SCALE;
+	//file.append_attribute("original_width") = w/MODTOOLS_SCALE;
+	//file.append_attribute("original_height") = h/MODTOOLS_SCALE;
 	file.append_attribute("pivot_x") = pivot_x;
 	file.append_attribute("pivot_y") = pivot_y;
 }
@@ -435,7 +440,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 	const uint32_t animation_id = s.animation_id++;
 	const computations_float_type frame_duration = A.getFrameDuration();
 
-	cout << "Exporting animation: " << A.getName() << endl;
+	//cout << "Exporting animation: " << A.getName() << endl;
 
 	xml_node animation = entity.append_child("animation");
 	AnimationMetadata animmeta(animation);
@@ -477,7 +482,7 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 	mainline_key.append_attribute("id") = key_id;
 	mainline_key.append_attribute("time") = start_time;
 
-	cout << "Exporting animation frame " << key_id << endl;
+	//cout << "Exporting animation frame " << key_id << endl;
 
 	AnimationFrameExporterState local_s(key_id);
 
@@ -497,13 +502,17 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, bframemeta, elem);
 
-		exportAnimationFrameElement(mainline_key, local_s, animsymmeta, bframemeta, elem);
+		exportAnimationFrameElement(mainline_key, local_s, animsymmeta, symmeta, elem);
 	}
 }
 
-static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolFrameMetadata& bframemeta, const KAnim::Frame::Element& elem) {
+static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolMetadata& symmeta, const KAnim::Frame::Element& elem) {
 	const uint32_t object_ref_id = s.object_ref_id++;
 	const uint32_t z_index = s.z_index++;
+
+	const uint32_t build_frame = elem.getBuildFrame();
+
+	const BuildSymbolFrameMetadata& bframemeta = symmeta.getFrameMetadata(build_frame);
 
 	//const uint32_t build_frame = elem.getBuildFrame();
 
@@ -517,7 +526,7 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 		s.last_sort_order = sort_order;
 	}
 
-	cout << "Exporting animation frame element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", key id " << animsymmeta.getTimelineId() << endl;
+	//cout << "Exporting animation frame element " << elem.getName() << ", build frame " << elem.getBuildFrame() << ", key id " << animsymmeta.getTimelineId() << endl;
 
 
 	xml_node object_ref = mainline_key.append_child("object_ref");
@@ -543,6 +552,22 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 	object_ref.append_attribute("z_index") = z_index;
 }
 
+
+struct matrix_components {
+	typedef computations_float_type float_type;
+
+	float_type scale_x, scale_y;
+	float_type angle;
+	int spin;
+
+	matrix_components() :
+		scale_x(1),
+		scale_y(1),
+		angle(0),
+		spin(1)
+	{}
+};
+
 /*
  * Decomposes (approximately if this is not possible exactly) a matrix into xy scalings and a rotation angle in radians.
  *
@@ -551,45 +576,45 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
  * Since the decomposition is not unique, the x scale is imposed to always be non-negative.
  *
  * Recall that the y coordinate is flipped in the conversion.
+ *
+ * The result is stored in ret, and last holds the last batch of results
+ * (the ones relevant for further computation, anyway)
  */
-template<typename T>
-static void decomposeMatrix(T a, T b, T c, T d, T& scale_x, T& scale_y, T& rot, T& last_sign) {
-	rot = atan2(c, d);
+template<typename MatrixType>
+static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_components& last) {
+	ret.angle = atan2(M[1][0], M[1][1]);
+	ret.scale_x = sqrt(M[0][0]*M[0][0] + M[1][0]*M[1][0]);
+	ret.scale_y = sqrt(M[0][1]*M[0][1] + M[1][1]*M[1][1]);
 
-	/*
-	scale_x = sqrt(a*a + b*b);
-	scale_y = sqrt(c*c + d*d);
-	*/
 
-	scale_x = sqrt(a*a + c*c);
+	ret.spin = (fabs(ret.angle - last.angle) <= M_PI ? 1 : -1);
+	if(ret.angle < last.angle) {
+		ret.spin = -ret.spin;
+	}
 
-	scale_y = sqrt(b*b + d*d);
 
-	if(fabs(d) < 0.001) {
-		scale_y *= last_sign;
+	last.angle = ret.angle;
+
+	
+	if(fabs(M[1][1]) < 0.001) {
+		if(last.scale_y < 0) {
+			ret.scale_y = -ret.scale_y;
+		}
 		return;
 	}
 
-	if(d < 0) {
-		if(fabs(rot) < M_PI/2) {
-			scale_y = -scale_y;
-			last_sign = -1;
-		}
-		else {
-			last_sign = 1;
+	if(M[1][1] < 0) {
+		if(fabs(ret.angle) < M_PI/2) {
+			ret.scale_y = -ret.scale_y;
 		}
 	}
 	else {
-		if(rot < 0) {
-			if(fabs(rot) > M_PI/2) {
-				scale_y = -scale_y;
-				last_sign = -1;
-			}
-			else {
-				last_sign = 1;
-			}
+		if(fabs(ret.angle) > M_PI/2) {
+			ret.scale_y = -ret.scale_y;
 		}
 	}
+
+	last.scale_y = ret.scale_y;
 }
 
 /*
@@ -606,12 +631,13 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	xml_node timeline = animsymmeta.getTimeline();
 
 	/*
-	 * Stores the last sign adopted by the matrix decomposition.
-	 * (how this sign is used and what it refers to is left for the function to decide).
+	 * Stores the last values of the matrix decomposition.
 	 *
-	 * Used to help preserve continuity.
+	 * Used to preserve continuity and minimize oscillations.
+	 *
+	 * It is edited internally by the decomposition function, nothing should be set to it.
 	 */
-	computations_float_type last_sign = 1;
+	matrix_components last_result;
 
 	int key_id = 0;
 	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
@@ -621,29 +647,32 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 		timeline_key.append_attribute("id") = key_id++;//build_frame; // This changed for deduplication.
 		timeline_key.append_attribute("time") = animsymframemeta.getStartTime();//tomilli(frame_duration*bframemeta.duration);//tomilli(frame_duration*bframemeta.duration);
-		timeline_key.append_attribute("spin") = 1;
 
-
-		xml_node object = timeline_key.append_child("object");
 
 		const matrix_type& M = animsymframemeta.getMatrix();
 
 		matrix_type::projective_vector_type trans;
 		M.getTranslation(trans);
 
-		computations_float_type scale_x, scale_y, rot;
-		decomposeMatrix(M[0][0], M[0][1], M[1][0], M[1][1], scale_x, scale_y, rot, last_sign);
-		if(rot < 0) {
-			rot += 2*M_PI;
+		matrix_components geo;
+		decomposeMatrix(M, geo, last_result);
+		if(geo.angle < 0) {
+			geo.angle += 2*M_PI;
 		}
-		rot *= 180.0/M_PI;
+		geo.angle *= 180.0/M_PI;
+
+
+		timeline_key.append_attribute("spin") = geo.spin;
+
+
+		xml_node object = timeline_key.append_child("object");
 
 		object.append_attribute("folder") = symmeta.folder_id;
 		object.append_attribute("file") = symmeta.getFileId(animsymframemeta.getBuildFrame());//build_frame;//animsymframemeta.getBuildFrame();
 		object.append_attribute("x") = trans[0];
 		object.append_attribute("y") = -trans[1];
-		object.append_attribute("scale_x") = scale_x;
-		object.append_attribute("scale_y") = scale_y;
-		object.append_attribute("angle") = rot;
+		object.append_attribute("scale_x") = geo.scale_x;
+		object.append_attribute("scale_y") = geo.scale_y;
+		object.append_attribute("angle") = geo.angle;
 	}
 }
