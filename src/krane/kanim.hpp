@@ -266,7 +266,7 @@ namespace Krane {
 			if(A->getBankHash() != hash) {
 				throw std::logic_error("Attempt to add an anim to the wrong bank.");
 			}
-			iterator match = find(A->getName());
+			iterator match = find(A->getFullName());
 			if(match != end()) {
 				throw KToolsError("Duplicate anim '" + match->first + "' in bank '" + name + "'");
 			}
