@@ -4,41 +4,50 @@ set( local_ktech_SOURCES
 
 set( local_ktech_HEADERS
 	ktech/ktech.hpp ktech/ktech_common.hpp 
-	ktech/ktech_options.hpp ktech/ktech_options_output.hpp
+	ktech/ktech_options.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
 	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
+	common/file_abstraction.hpp
+	common/ktools_options_customization.hpp
 )
 
 
 set( local_krane_SOURCES
-	krane/krane.cpp
+	krane/krane.cpp krane/krane_options.cpp
 	krane/kbuild.cpp krane/kanim.cpp
 	krane/kbuild_serialize.cpp krane/kanim_serialize.cpp
 	krane/scml.cpp
 )
 
 set( local_krane_HEADERS
-	krane/krane.hpp krane/krane_common.hpp
+	krane/krane.hpp krane/krane_common.hpp krane/krane_options.hpp
 	krane/kbuild.hpp krane/kanim.hpp
 	krane/scml.hpp
+	krane/krane_options.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
 	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
+	common/file_abstraction.hpp
+	common/ktools_options_customization.hpp
 )
 
 
 set( local_ktool_common_SOURCES
 	common/ktools_common.cpp
 	common/ktex/ktex.cpp common/ktex/specs.cpp
+	common/file_abstraction.cpp
+	common/ktools_options_customization.cpp
 )
 
 set( local_ktool_common_HEADERS
 	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
 	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
+	common/file_abstraction.hpp
+	common/ktools_options_customization.hpp
 )
 
 

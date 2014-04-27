@@ -53,11 +53,11 @@ namespace KTools {
 
 
 		static inline void read_fail() {
-			throw KToolsError("IO error: failed to read data from stream. It might be corrupt.");
+			throw KToolsError("failed to read data from stream. It might be corrupt.");
 		}
 
 		static inline void write_fail() {
-			throw KToolsError("IO error: failed to write data to stream.");
+			throw KToolsError("failed to write data to stream.");
 		}
 
 
@@ -225,13 +225,9 @@ namespace KTools {
 		}
 
 		static inline void read_string(std::istream& in, std::string& str, const size_t len) {
-			char stack_buffer[1 << 15];
-			char *buffer;
-			if(len <= sizeof(stack_buffer)) {
-				buffer = stack_buffer;
-			}
-			else {
-				buffer = new char[len];
+			char buffer[1 << 15];
+			if(len > sizeof(buffer)) {
+				throw KToolsError( strformat("Attempt to read a string larger than %lu bytes. The stream might be corrupt.", (unsigned long)sizeof(buffer)) );
 			}
 
 			if(!in.read(buffer, len)) {
@@ -239,10 +235,6 @@ namespace KTools {
 			}
 
 			str.assign(buffer, len);
-
-			if(buffer != stack_buffer) {
-				delete[] buffer;
-			}
 		}
 
 		template<typename LengthType>
@@ -275,7 +267,59 @@ namespace KTools {
 				write_fail();
 			}
 		}
+
+		template<typename charT, typename charTraits>
+		static inline void sanitizeStream(std::basic_ios<charT, charTraits>& s) {
+			s.imbue(std::locale::classic());
+		}
+
+		static inline void openBinaryStream(std::ifstream& in, const std::string& fname, bool validate = true) {
+			in.open(fname.c_str(), std::ifstream::in | std::ifstream::binary);
+			if(validate) {
+				check_stream_validity(in, fname);
+			}
+			sanitizeStream(in);
+		}
+
+		static inline void openBinaryStream(std::ofstream& out, const std::string& fname, bool validate = true) {
+			out.open(fname.c_str(), std::ifstream::out | std::ifstream::binary);
+			if(validate) {
+				check_stream_validity(out, fname);
+			}
+			sanitizeStream(out);
+		}
+
+		static inline uint32_t getMagicNumber(std::istream& in, bool rewind = true) {
+			std::streampos p;
+			
+			if(rewind) {
+				p = in.tellg();
+
+				if(p < 0) {
+					throw KToolsError("Input stream is not seekable.");
+				}
+
+				in.seekg(0, in.beg);
+			}
+
+			uint32_t magic;
+			raw_read_integer(in, magic);
+
+			if(rewind) {
+				in.seekg(p, in.beg);
+			}
+
+			return magic;
+		}
+
+		static inline uint32_t getMagicNumber(const std::string& fname, bool rewind = true) {
+			std::ifstream in;
+			openBinaryStream(in, fname, true);
+			return getMagicNumber(in, rewind);
+		}
 	};
+
+	typedef BinIOHelper BinaryIOHelper;
 }
 
 #endif

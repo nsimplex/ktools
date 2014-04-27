@@ -17,17 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ktech.hpp"
 #include "ktech_options.hpp"
-#include "ktech_options_output.hpp"
+#include "ktools_options_customization.hpp"
 #include <tclap/CmdLine.h>
 
 #include <cctype>
-
-
-static const std::string license =
-"Copyright (C) 2013 simplex.\n\
-License GPLv2+: GNU GPL version 2 or later <https://gnu.org/licenses/old-licenses/gpl-2.0.html>.\n\
-This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.";
 
 
 // Message appended to the bottom of the (long) usage statement.
@@ -50,10 +43,6 @@ If output-path contains the string '%02d', then for TEX input all its\n\
 mipmaps will be exported in a sequence of images by replacing '%02d' with\n\
 the number of the mipmap (counting from zero).";
 
-
-
-// Maps a boolean value for requiredness into a bracket pair.
-static const char option_brackets[2][2] = { {'[', ']'}, {'<', '>'} };
 
 
 namespace KTech {
@@ -90,6 +79,7 @@ std::string normalize_string(const std::string& s) {
 	const size_t n = s.length();
 
 	std::string ret;
+	ret.reserve(n);
 
 	for(i = 0; i < n && isalnum(s[i]); ++i) {
 		ret.push_back( char(tolower(s[i])) );
@@ -104,169 +94,69 @@ std::string normalize_string(const std::string& s) {
 	return ret;
 }
 
-template<typename T>
-class StrOptTranslator {
-public:
-	// List of options
-	vector<string> opts;
 
-	// Mapping of option name to internal value
-	map<string, T> opt_map;
+namespace KTech {
+	namespace options_custom {
+		using namespace KTools::options_custom;
 
-	std::string default_opt;
+		class HeaderStrOptTranslator : public StrOptTranslator<KTEX::HeaderFieldSpec::value_t> {
+		public:
+			HeaderStrOptTranslator(const std::string& id) {
+				const KTEX::HeaderFieldSpec& spec = KTEX::HeaderSpecs::FieldSpecs[id];
 
-	void push_opt(const std::string& name, T val) {
-		opts.push_back(name);
-		opt_map.insert( make_pair(name, val) );
-	}
+				assert( spec.isValid() );
 
-	T translate(const std::string& name) const {
-		typename map<string, T>::const_iterator it = opt_map.find(name);
-		if(it == opt_map.end()) {
-			throw( Error("Invalid option " + name) );
-		}
-		return it->second;
-	}
+				typedef KTEX::HeaderFieldSpec::values_map_t::const_iterator iter_t;
 
-	std::string inverseTranslate(const T val) const {
-		typename map<string, T>::const_iterator it;
-		for(it = opt_map.begin(); it != opt_map.end(); ++it) {
-			if(it->second == val) {
-				return it->first;
+				for(iter_t it = spec.values.begin(); it != spec.values.end(); ++it) {
+					string name = normalize_string( it->first );
+
+					push_opt(name, it->second);
+
+					if(it->second == spec.value_default) {
+						default_opt = name;
+					}
+				}
 			}
-		}
-		return "";
-	}
+		};
 
-	T translate(ValueArg<string>& a) const {
-		return translate( a.getValue() );
-	}
-};
+		class FilterTypeTranslator : public StrOptTranslator<Magick::FilterTypes> {
+		public:
+			FilterTypeTranslator() {
+				using namespace Magick;
 
-class HeaderStrOptTranslator : public StrOptTranslator<KTEX::HeaderFieldSpec::value_t> {
-public:
-	HeaderStrOptTranslator(const std::string& id) {
-		const KTEX::HeaderFieldSpec& spec = KTEX::HeaderSpecs::FieldSpecs[id];
+				push_opt("lanczos", LanczosFilter);
+				push_opt("mitchell", MitchellFilter);
+				push_opt("bicubic", CatromFilter);
+				//push_opt("blackman", BlackmanFilter);
+				//push_opt("hann", HanningFilter);
+				//push_opt("hamming", HammingFilter);
+				push_opt("catrom", CatromFilter);
+				push_opt("cubic", CubicFilter);
+				//push_opt("quadratic", QuadraticFilter);
+				push_opt("box", BoxFilter);
 
-		assert( spec.isValid() );
-
-		typedef KTEX::HeaderFieldSpec::values_map_t::const_iterator iter_t;
-
-		for(iter_t it = spec.values.begin(); it != spec.values.end(); ++it) {
-			string name = normalize_string( it->first );
-
-			push_opt(name, it->second);
-
-			if(it->second == spec.value_default) {
-				default_opt = name;
+				default_opt = inverseTranslate(options::filter);
 			}
-		}
+		};
 	}
-};
-
-class FilterTypeTranslator : public StrOptTranslator<Magick::FilterTypes> {
-public:
-	FilterTypeTranslator() {
-		using namespace Magick;
-
-		push_opt("lanczos", LanczosFilter);
-		push_opt("mitchell", MitchellFilter);
-		push_opt("bicubic", CatromFilter);
-		//push_opt("blackman", BlackmanFilter);
-		//push_opt("hann", HanningFilter);
-		//push_opt("hamming", HammingFilter);
-		push_opt("catrom", CatromFilter);
-		push_opt("cubic", CubicFilter);
-		//push_opt("quadratic", QuadraticFilter);
-		push_opt("box", BoxFilter);
-
-		default_opt = inverseTranslate(options::filter);
-	}
-};
-
-
-class ArgumentOption : public UnlabeledValueArg<string> {
-public:
-	virtual bool processArg(int* i, vector<string>& args) {
-		// POSIX-like behaviour.
-		if(!Arg::ignoreRest()) {
-			const std::string& s = args[*i];
-			if(s.length() == 0 || s[0] == TCLAP::Arg::flagStartChar()) {
-				return false;
-			}
-		}
-
-		return UnlabeledValueArg<string>::processArg(i, args);
-	}
-
-	virtual std::string shortID(const std::string& val= "") const {
-		std::string original = UnlabeledValueArg<string>::shortID(val);
-
-		return std::string(1, option_brackets[isRequired()][0])
-			+ original.substr(1, original.length() - 2)
-			+ std::string(1, option_brackets[isRequired()][1]);
-	}
-
-	ArgumentOption(const string& name, const string& desc, bool req, const string& typeDesc) :
-		UnlabeledValueArg<string>(name, desc, req, "", typeDesc) {}
-};
-
-
-template<typename T>
-class MyValueArg : public ValueArg<T> {
-public:
-	MyValueArg( const std::string& flag, 
-                    const std::string& name, 
-                    const std::string& desc, 
-                    bool req, 
-                    T value,
-                    const std::string& typeDesc) : ValueArg<T>(flag, name, desc, req, value, typeDesc) {}
-
-	MyValueArg( const std::string& flag, 
-                    const std::string& name, 
-                    const std::string& desc, 
-                    bool req, 
-                    T value,
-                    Constraint<T>* constraint) : ValueArg<T>(flag, name, desc, req, value, constraint) {}
-	
-	virtual std::string longID(const::std::string& val = "") const;
-};
-
-template<typename T>
-std::string MyValueArg<T>::longID(const::std::string& val) const {
-	using namespace std;
-	using namespace TCLAP;
-	(void)val;
-
-	const std::string& valueId = this->_typeDesc;
-
-	string id;
-
-	if(this->getFlag().length() > 0) {
-		id += Arg::flagStartString() + this->getFlag() + ",  ";
-	}
-
-	id += Arg::nameStartString() + this->getName();
-
-	if(this->isValueRequired()) {
-		id += string(2, Arg::delimiter()) + std::string(1, option_brackets[1][0]) + valueId + std::string(1, option_brackets[1][1]);
-	}
-
-	return id;
 }
+
 
 static const std::string FROM_TEX = "Options for TEX input";
 static const std::string TO_TEX = "Options for TEX output";
 
 
 KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, string& input_path, string& output_path) {
+	using namespace KTech::options_custom;
+
 	KTEX::File::Header configured_header;
 	configured_header.io.setNativeSource();
 
 	try {
 		typedef HeaderStrOptTranslator str_trans;
 
-		options::Output myOutput(license);
+		options_custom::Output myOutput(license);
 
 		CmdLine cmd(usage_message, ' ', PACKAGE_VERSION);
 		cmd.setOutput(&myOutput);
@@ -314,10 +204,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		args.push_back(&no_mipmaps_flag);
 		myOutput.setArgCategory(no_mipmaps_flag, TO_TEX);
 
-		MyValueArg<int> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, -1, "pixels");
+		MyValueArg<size_t> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, -1, "pixels");
 		args.push_back(&width_opt);
 
-		MyValueArg<int> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, -1, "pixels");
+		MyValueArg<size_t> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, -1, "pixels");
 		args.push_back(&height_opt);
 
 		SwitchArg pow2_opt("", "pow2", "Rounds width and height up to a power of 2. Applied after the options `width' and `height', if given.");
@@ -384,11 +274,11 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 
 		options::no_mipmaps = no_mipmaps_flag.getValue();
 
-		if(width_opt.getValue() > 0) {
+		if(width_opt.isSet()) {
 			options::width = Just((size_t)width_opt.getValue());
 		}
 
-		if(height_opt.getValue() > 0) {
+		if(height_opt.isSet()) {
 			options::height = Just((size_t)height_opt.getValue());
 		}
 

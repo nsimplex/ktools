@@ -61,6 +61,7 @@ namespace KTools {
 		}
 
 		T& operator[](size_t i) {
+
 			return x[i];
 		}
 

@@ -16,20 +16,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#ifndef KRANE_HPP
-#define KRANE_HPP
+#ifndef KRANE_OPTIONS_HPP
+#define KRANE_OPTIONS_HPP
 
 #include "krane_common.hpp"
-#include "kbuild.hpp"
-#include "kanim.hpp"
-#include "scml.hpp"
-
-#include "file_abstraction.hpp"
-
-#include "krane_options.hpp"
 
 namespace Krane {
-	void parse_commandline_options(int& argc, char**& argv, std::list<KTools::VirtualPath>& input_paths, Compat::Path& output_path);
+	namespace options {
+		extern Maybe<std::string> allowed_build;
+
+		typedef std::vector<std::string> allowed_banks_t;
+		extern allowed_banks_t allowed_banks;
+
+		extern Maybe<std::string> build_rename;
+
+		extern Maybe<std::string> banks_rename;
+
+		extern int verbosity;
+		extern bool info;
+	}
 }
 
 #endif

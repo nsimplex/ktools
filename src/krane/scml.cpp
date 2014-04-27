@@ -18,20 +18,20 @@ static const computations_float_type TIME_SCALE = 1;
 /***********************************************************************/
 
 
-static void sanitize_stream(std::ostream& out) {
-	out.imbue(locale::classic());
-}
-
 template<typename T>
-static inline T normalize_time(T t) {
+static inline T normalize_time(T t) CONSTFUNCTION;
+template<typename T>
+inline T normalize_time(T t) {
 	return TIME_SCALE*t;
 }
 
-static inline int tomilli(float x) {
+static inline int tomilli(float x) CONSTFUNCTION;
+inline int tomilli(float x) {
 	return int(ceilf(1000.0f*normalize_time(x)));
 }
 
-static inline int tomilli(double x) {
+static inline int tomilli(double x) CONSTFUNCTION;
+inline int tomilli(double x) {
 	return int(ceil(1000.0*normalize_time(x)));
 }
 
@@ -306,7 +306,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 
 void Krane::exportToSCML(std::ostream& out, const KBuild& bild, const KAnimBankCollection& banks) {
-	sanitize_stream(out);
+	BinIOHelper::sanitizeStream(out);
 
 	xml_document scml;
 	xml_node decl = scml.prepend_child(node_declaration);

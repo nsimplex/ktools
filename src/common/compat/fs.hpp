@@ -54,9 +54,10 @@ namespace Compat {
 
 	private:
 		void normalizeDirSeps(std::string& str) {
-			std::string::iterator _begin = str.begin();
-			//std::advance(_begin, offset);
-			std::replace(_begin, str.end(), DUAL_SEPARATOR, SEPARATOR);
+			if(SEPARATOR != '/') {
+				std::string::iterator _begin = str.begin();
+				std::replace(_begin, str.end(), DUAL_SEPARATOR, SEPARATOR);
+			}
 		}
 
 		/*
@@ -196,6 +197,8 @@ namespace Compat {
 		}
 
 		PathAbstraction() {}
+
+		virtual ~PathAbstraction() {}
 
 		PathAbstraction copy() const {
 			return PathAbstraction(*this);

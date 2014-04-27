@@ -28,7 +28,7 @@ namespace Krane {
 
 	class KAnim;
 
-	template<template<typename T, typename A> class Container = std::list, typename Alloc = std::allocator<KAnim*> >
+	template<template<typename T, typename A> class Container = std::deque, typename Alloc = std::allocator<KAnim*> >
 	class KAnimFile;
 
 	class KAnim : public NestedSerializer<GenericKAnimFile> {
@@ -170,7 +170,7 @@ namespace Krane {
 		// Includes the facing direction suffix, if any.
 		void getFullName(std::string& fullname) const;
 
-		std::string getFullName() const {
+		std::string getFullName() const PUREFUNCTION {
 			std::string fullname;
 			getFullName(fullname);
 			return fullname;
@@ -192,6 +192,7 @@ namespace Krane {
 
 		void setBank(const std::string& s) {
 			bank = s;
+			bank_hash = strhash(s);
 		}
 
 		uint32_t getFrameCount() const {
@@ -266,7 +267,8 @@ namespace Krane {
 			if(A->getBankHash() != hash) {
 				throw std::logic_error("Attempt to add an anim to the wrong bank.");
 			}
-			std::string fullname = A->getFullName();
+			std::string fullname;
+			A->getFullName(fullname);
 			iterator match = find(fullname);
 			if(match != end()) {
 				throw KToolsError("Duplicate anim '" + match->first + "' in bank '" + name + "'");
@@ -331,6 +333,8 @@ namespace Krane {
 
 		virtual std::istream& loadPre_all_anims(std::istream& in, int verbosity) = 0;
 		virtual std::istream& loadPost_all_anims(std::istream& in, const hashtable_t& ht, int verbosity) = 0;
+
+		virtual ~GenericKAnimFile() {}
 	};
 
 
@@ -338,6 +342,7 @@ namespace Krane {
 	class KAnimFile : public GenericKAnimFile {
 	public:
 		typedef Container<KAnim*, Alloc> animcontainer_t;
+		typedef animcontainer_t animlist_t;
 		typedef typename animcontainer_t::iterator anim_iterator;
 		typedef typename animcontainer_t::const_iterator anim_const_iterator;
 
@@ -391,6 +396,10 @@ namespace Krane {
 			return in;
 		}
 
+		// Clears ownership without deleting anything.
+		void softClear() {
+			anims.clear();
+		}
 
 		void clear() {
 			for(anim_iterator it = anims.begin(); it != anims.end(); ++it) {
@@ -398,7 +407,7 @@ namespace Krane {
 					delete *it;
 				}
 			}
-			anims.clear();
+			softClear();
 		}
 
 		operator bool() const {
@@ -425,11 +434,13 @@ namespace Krane {
 		virtual ~KAnimSelector() {}
 	};
 
+	/*
 	// Subclass which may be used on anims which just metadata
 	// (i.e., before any frame was loaded)
 	class KAnimMetadataSelector : public KAnimSelector {};
+	*/
 
-	class BankKAnimSelector : public KAnimSelector {
+	class KAnimBankSelector : public KAnimSelector {
 		std::set<hash_t> bank_set;
 
 	public:
@@ -439,6 +450,30 @@ namespace Krane {
 
 		virtual bool select(const KAnim& A) {
 			return bank_set.count(A.getBankHash()) > 0;
+		}
+	};
+
+	class KAnimMapper : public std::unary_function<KAnim&, void> {
+	public:
+		virtual void apply(KAnim& A) {
+			(void)A;
+		}
+
+		void operator()(KAnim& A) {
+			apply(A);
+		}
+
+		virtual ~KAnimMapper() {}
+	};
+
+	class KAnimBankRenamer : public KAnimMapper {
+		std::string targname;
+
+	public:
+		KAnimBankRenamer(const std::string& _targname) : targname(_targname) {}
+
+		virtual void apply(KAnim& A) {
+			A.setBank(targname);
 		}
 	};
 
@@ -484,16 +519,22 @@ namespace Krane {
 	 * Maps a bank hash to a bank pointer.
 	 * Owns the pointers.
 	 * Owns the selector pointer.
+	 * Owns the mapper pointer.
 	 */
 	class KAnimBankCollection : public std::map<hash_t, KAnimBank*>, NonCopyable {
 		typedef std::map<hash_t, KAnimBank*> super;
 
 		KAnimSelector* s;
+		KAnimMapper* f;
 
 	public:
 		void setSelector(KAnimSelector* _s) {
-			clear();
+			clearSelector();
 			s = _s;
+		}
+
+		void setMapper(KAnimMapper* _f) {
+			f = _f;
 		}
 
 		void clearBanks() {
@@ -502,6 +543,7 @@ namespace Krane {
 					delete it->second;
 				}
 			}
+			softClear();
 		}
 
 		void clearSelector() {
@@ -511,10 +553,27 @@ namespace Krane {
 			}
 		}
 
+		void clearMapper() {
+			if(f != NULL) {
+				delete f;
+				f = NULL;
+			}
+		}
+
+		void clearFunctionals() {
+			clearSelector();
+			clearMapper();
+		}
+
+		// Clears ownership without deleting anything.
+		// Does not clear the selector.
+		void softClear() {
+			super::clear();
+		}
+
 		void clear() {
 			clearBanks();
-			clearSelector();
-			super::clear();
+			clearFunctionals();
 		}
 
 		// Now owns the anim.
@@ -523,6 +582,10 @@ namespace Krane {
 				delete A;
 				A = NULL;
 				return;
+			}
+
+			if(f != NULL) {
+				(*f)(*A);
 			}
 
 			KAnimBank* B;
@@ -548,7 +611,7 @@ namespace Krane {
 			}
 		}
 
-		KAnimBankCollection() : s(NULL) {}
+		KAnimBankCollection() : super(), s(NULL), f(NULL) {}
 	};
 }
 

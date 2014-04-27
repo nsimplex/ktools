@@ -24,4 +24,18 @@
 typedef int mode_t
 #endif
 
+#ifdef __GNUC__
+#	define PRINTFSTYLE(fmt_index, first_to_check) __attribute__ ((format (printf, fmt_index, first_to_check)))
+#	define DEPRECATEDFUNCTION __attribute__ ((deprecated))
+#	define CONSTFUNCTION __attribute__ ((const))
+#	define PUREFUNCTION __attribute__ ((pure))
+#	define HOTFUNCTION __attribute__ ((hot))
+#else
+#	define PRINTFSTYLE(fmt_index, first_to_check)
+#	define DEPRECATEDFUNCTION
+#	define CONSTFUNCTION
+#	define PUREFUNCTION
+#	define HOTFUNCTION
+#endif
+
 #endif

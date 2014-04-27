@@ -15,16 +15,11 @@ namespace Krane {
 		}
 		
 		std::ifstream in(path.c_str(), std::ifstream::in | std::ifstream::binary);
-		if(!in)
-			throw(KToolsError("failed to open `" + path + "' for reading."));
+		check_stream_validity(in, path);
 
 		in.imbue(std::locale::classic());
 
 		load(in, verbosity);
-
-		if(verbosity >= 0) {
-			std::cout << "Finished loading." << std::endl;
-		}
 	}
 	
 	istream& GenericKAnimFile::load(istream& in, int verbosity) {

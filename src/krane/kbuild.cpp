@@ -11,6 +11,13 @@ namespace Krane {
 		using namespace Magick;
 		using namespace std;
 
+		/*
+		cout << "Image of " << getUnixPath() << ":" << endl;
+		cout << atlas_bbox.w() << "x" << atlas_bbox.h() << "+" << atlas_bbox.x() << "+" << atlas_bbox.y() << endl;
+		cout << ": " << bbox.w() << "x" << bbox.h() << "+" << bbox.x() << "+" << bbox.y() << endl;
+		cout << "Atlas idx: " << getAtlasIdx() << endl;
+		*/
+
 		// Bounding quad.
 		Image quad;
 		// Size of the atlas.
@@ -18,7 +25,7 @@ namespace Krane {
 		// Offset used in the cropping.
 		bbox_type::vector_type offset;
 		{
-			Image atlas = parent->parent->getFrontAtlas();
+			Image atlas = parent->parent->atlases[getAtlasIdx()].second;
 
 			w0 = atlas.columns();
 			h0 = atlas.rows();
@@ -33,7 +40,7 @@ namespace Krane {
 			cropgeo.height(size_t( floor(h0*atlas_bbox.h()) ));
 
 			quad = atlas;
-			quad.crop(cropgeo);
+			MAGICK_WRAP(quad.crop(cropgeo));
 		}
 
 
@@ -50,7 +57,7 @@ namespace Krane {
 		size_t ntrigs = uvwtriangles.size();
 		list<Coordinate> coords;
 		for(size_t i = 0; i < ntrigs; i++) {
-			const triangle_type& trig = uvwtriangles[i];
+			const uvwtriangle_type& trig = uvwtriangles[i];
 
 			coords.push_back( Coordinate(trig.a[0]*w0 - offset[0], (1 - trig.a[1])*h0 - offset[1]) );
 			coords.push_back( Coordinate(trig.b[0]*w0 - offset[0], (1 - trig.b[1])*h0 - offset[1]) );
@@ -59,21 +66,21 @@ namespace Krane {
 			drawable_trigs.push_back( DrawablePolygon(coords) );
 			coords.clear();
 		}
-		mask.draw(drawable_trigs);
+		MAGICK_WRAP(mask.draw(drawable_trigs));
 
 
 		// Returned image (clipped quad).
 		Image img = Image(geo, "transparent");
 		img.clipMask(mask);
-		img.composite( quad, Geometry(0, 0), OverCompositeOp );
+		MAGICK_WRAP(img.composite( quad, Geometry(0, 0), OverCompositeOp ));
 
 
 		// This is to reverse the scaling down applied by the mod tools' scml compiler.
 		Geometry scaling_geo;
 		scaling_geo.aspect(true);
-		scaling_geo.width(bbox.w());
-		scaling_geo.height(bbox.h());
-		img.resize(scaling_geo);
+		scaling_geo.width(bbox.int_w());
+		scaling_geo.height(bbox.int_h());
+		MAGICK_WRAP(img.resize(scaling_geo));
 
 		return img;
 	}

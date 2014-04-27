@@ -15,16 +15,11 @@ namespace Krane {
 		}
 		
 		std::ifstream in(path.c_str(), std::ifstream::in | std::ifstream::binary);
-		if(!in)
-			throw(KToolsError("failed to open `" + path + "' for reading."));
+		check_stream_validity(in, path);
 
 		in.imbue(std::locale::classic());
 
 		load(in, verbosity);
-
-		if(verbosity >= 0) {
-			std::cout << "Finished loading." << std::endl;
-		}
 	}
 
 	istream& KBuildFile::load(istream& in, int verbosity) {
@@ -86,11 +81,11 @@ namespace Krane {
 		if(numatlases == 0) {
 			throw(KToolsError("Build file has 0 atlases."));
 		}
-		atlasnames.resize(numatlases);
+		atlases.resize(numatlases);
 		for(uint32_t i = 0; i < numatlases; i++) {
-			io->read_len_string<uint32_t>(in, atlasnames[i]);
+			io->read_len_string<uint32_t>(in, atlases[i].first);
 			if(verbosity >= 1) {
-				cout << "\tGot atlas name: " << atlasnames[i] << endl;
+				cout << "\tGot atlas name: " << atlases[i].first << endl;
 			}
 		}
 
@@ -268,10 +263,12 @@ namespace Krane {
 	istream& KBuild::Symbol::Frame::loadPost(istream& in, int verbosity) {
 		(void)verbosity;
 
+		Maybe<float> uvwdepth;
+
 		uint32_t numtrigs = countTriangles();
 		for(uint32_t i = 0; i < numtrigs; i++) {
-			triangle_type::vertex_type xyzs[3];
-			triangle_type::vertex_type uvws[3];
+			xyztriangle_type::vertex_type xyzs[3];
+			uvwtriangle_type::vertex_type uvws[3];
 
 			for(int j = 0; j < 3; j++) {
 				float _x, _y, _z;
@@ -290,10 +287,16 @@ namespace Krane {
 
 				uvws[j][0] = _u;
 				uvws[j][1] = _v;
-				uvws[j][2] = _w;
+
+				if(uvwdepth == nil) {
+					uvwdepth = Just(_w);
+				}
+				else if( fabsf(uvwdepth - _w) >= 0.5f ) {
+					throw KToolsError("Inconsistent uvw depth in build symbol frame.");
+				}
 
 				if(!in) {
-					throw(KToolsError("Corrupted build file (failed to read VB vertex)."));
+					throw(KToolsError("Corrupt build file (failed to read VB vertex)."));
 				}
 			}
 
@@ -305,6 +308,8 @@ namespace Krane {
 			uvwtriangles[i].b = uvws[1];
 			uvwtriangles[i].c = uvws[2];
 		}
+
+		atlas_depth = int(floorf(uvwdepth + 0.5f));
 
 		updateAtlasBoundingBox();
 

@@ -178,9 +178,6 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	}
 	read_images( input_paths, imgs );
 	assert( input_paths.size() == imgs.size() );
-	if(verbosity >= 0) {
-		cout << "Finished loading." << endl;
-	}
 
 	resize_image( imgs.front() );
 
@@ -343,8 +340,8 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	catch(std::exception& e) {
-		cerr << "error: " << e.what() << endl;
-		exit(1);
+		cerr << "Error: " << e.what() << endl;
+		exit(-1);
 	}
 
 	return 0;

@@ -27,7 +27,7 @@ bool KTools::KTEX::File::isKTEXFile(const std::string& path) {
 	uint32_t magic;
 
 	std::ifstream file(path.c_str(), std::ifstream::in | std::ifstream::binary);
-	if(!file)
+	if(!check_stream_validity(file, "", false))
 		return false;
 
 	file.imbue(std::locale::classic());
@@ -43,16 +43,11 @@ void KTools::KTEX::File::dumpTo(const std::string& path, int verbosity) {
 	}
 
 	std::ofstream out(path.c_str(), std::ofstream::out | std::ofstream::binary);
-	if(!out)
-		throw(KToolsError("failed to open `" + path + "' for writing."));
+	check_stream_validity(out, path);
 
 	out.imbue(std::locale::classic());
 
 	dump(out, verbosity);
-
-	if(verbosity >= 0) {
-		std::cout << "Finished dumping." << std::endl;
-	}
 }
 
 void KTools::KTEX::File::loadFrom(const std::string& path, int verbosity, bool info_only) {
@@ -61,16 +56,11 @@ void KTools::KTEX::File::loadFrom(const std::string& path, int verbosity, bool i
 	}
 	
 	std::ifstream in(path.c_str(), std::ifstream::in | std::ifstream::binary);
-	if(!in)
-		throw(KToolsError("failed to open `" + path + "' for reading."));
+	check_stream_validity(in, path);
 
 	in.imbue(std::locale::classic());
 
 	load(in, verbosity, info_only);
-
-	if(verbosity >= 0) {
-		std::cout << "Finished loading." << std::endl;
-	}
 }
 
 void KTools::KTEX::File::Header::print(std::ostream& out, int verbosity, size_t indentation, const std::string& indent_string) const {

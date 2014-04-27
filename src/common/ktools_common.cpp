@@ -21,21 +21,43 @@ int snprintf(char *str, size_t n, const char *fmt, ...) {
 #endif
 
 namespace KTools {
-	int strformat(std::string& s, const char *fmt, ...) {
+	static int vstrformat_inplace(std::string& s, const char *fmt, va_list ap) {
 		char buffer[1 << 15];
+
+		const int ret = vsnprintf(buffer, sizeof(buffer) - 1, fmt, ap);
+
+		if(ret > 0) {
+			s.assign(buffer, ret);
+		}
+		else {
+			s.clear();
+		}
+
+		return ret;
+	}
+
+	int strformat_inplace(std::string& s, const char *fmt, ...) {
+		va_list ap;
+		va_start(ap, fmt);
+
+		const int ret = vstrformat_inplace(s, fmt, ap);
+
+		va_end(ap);
+
+		return ret;
+	}
+
+	std::string strformat(const char *fmt, ...) {
+		std::string s;
 
 		va_list ap;
 		va_start(ap, fmt);
 
-		const int ret = vsnprintf(buffer, sizeof(buffer) - 1, fmt, ap);
+		(void)vstrformat_inplace(s, fmt, ap);
 
 		va_end(ap);
 
-		if(ret >= 0) {
-			s.assign(buffer, ret);
-		}
-
-		return ret;
+		return s;
 	}
 
 	const char * DataFormatter::operator()(const char * fmt, ...) {

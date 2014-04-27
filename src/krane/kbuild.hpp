@@ -43,12 +43,13 @@ namespace Krane {
 				friend class KBuild;
 
 			public:
-				typedef Triangle<float_type> triangle_type;
+				typedef Triangle<float_type, 3> xyztriangle_type;
+				typedef Triangle<float_type, 2> uvwtriangle_type;
 				typedef BoundingBox<float_type> bbox_type;
 
 			private:
-				std::vector<triangle_type> xyztriangles;
-				std::vector<triangle_type> uvwtriangles;
+				std::vector<xyztriangle_type> xyztriangles;
+				std::vector<uvwtriangle_type> uvwtriangles;
 
 				void setAlphaVertCount(uint32_t n) {
 					const uint32_t trigs = n/3;
@@ -91,6 +92,15 @@ namespace Krane {
 				 */
 				bbox_type bbox;
 
+				/*
+				 * "Depth" of the atlas (z coordinate of the uvw points).
+				 */
+				int atlas_depth;
+
+				int getAtlasDepth() const {
+					return atlas_depth;
+				}
+
 			public:
 				uint32_t getFrameNumber() const {
 					return framenum;
@@ -107,13 +117,17 @@ namespace Krane {
 				const bbox_type& getBoundingBox() const {
 					return bbox;
 				}
+
+				int getAtlasIdx() const {
+					return getAtlasDepth() - parent->getSamplerOffset();
+				}
 			
 				/*
 				 * Bounding box of the corresponding atlas region, in UV coordinates.
 				 */
 				BoundingBox<float_type> atlas_bbox;
 
-				void addTriangles(const triangle_type& xyz, const triangle_type& uvw) {
+				void addTriangles(const xyztriangle_type& xyz, const uvwtriangle_type& uvw) {
 					xyztriangles.push_back(xyz);
 					uvwtriangles.push_back(uvw);
 					atlas_bbox.addPoints(uvw);
@@ -128,12 +142,12 @@ namespace Krane {
 					return 3*countTriangles();
 				}
 
-				Magick::Image getImage() const;
+				Magick::Image getImage() const HOTFUNCTION;
 
 				void getName(std::string& s) const {
 					std::string parent_name;
 					parent->getName(parent_name);
-					strformat(s, "%s-%u", parent_name.c_str(), (unsigned int)framenum);
+					strformat_inplace(s, "%s-%u", parent_name.c_str(), (unsigned int)framenum);
 				}
 
 				std::string getName() const {
@@ -215,6 +229,14 @@ namespace Krane {
 
 			const std::string& getName() const {
 				return name;
+			}
+
+			hash_t getHash() const {
+				return hash;
+			}
+
+			int getSamplerOffset() const {
+				return parent->getSamplerOffset();
 			}
 
 			/*
@@ -309,8 +331,11 @@ namespace Krane {
 	private:
 		std::string name;
 
-		std::vector<std::string> atlasnames;
-		std::vector<atlas_t> atlases;
+		/*
+		 * Offset added to the atlas idx of each element frame to form
+		 * the resulting atlas "depth".
+		 */
+		mutable Maybe<int> sampler_offset;
 
 	public:
 		typedef std::map<hash_t, Symbol> symbolmap_t;
@@ -318,6 +343,9 @@ namespace Krane {
 		typedef symbolmap_t::const_iterator symbolmap_const_iterator;
 
 		symbolmap_t symbols;
+
+		typedef std::vector< std::pair<std::string, atlas_t> > atlaslist_t;
+		atlaslist_t atlases;
 
 
 		const std::string& getName() const {
@@ -328,32 +356,58 @@ namespace Krane {
 			name = s;
 		}
 
+		/*
 		const std::string& getFrontAtlasName() const {
-			if(atlasnames.empty()) {
-				throw(std::logic_error("No atlases."));
+			if(atlases.empty()) {
+				throw(std::logic_error("Build has no atlases."));
 			}
-			return atlasnames[0];
+			return atlases[0].first;
 		}
 
 		atlas_t& getFrontAtlas() {
 			if(atlases.empty()) {
 				throw(std::logic_error("No atlases."));
 			}
-			return atlases[0];
+			return atlases[0].second;
 		}
 
 		const atlas_t& getFrontAtlas() const {
 			if(atlases.empty()) {
 				throw(std::logic_error("No atlases."));
 			}
-			return atlases[0];
+			return atlases[0].second;
 		}
 
 		void setFrontAtlas(const atlas_t& a) {
 			if(atlases.empty()) {
 				atlases.resize(1);
 			}
-			atlases[0] = a;
+			atlases[0].second = a;
+		}
+		*/
+
+		int getSamplerOffset() const {
+			if(sampler_offset == nil) {
+				Maybe<int> max_depth;
+
+				for(symbolmap_t::const_iterator symit = symbols.begin(); symit != symbols.end(); ++symit) {
+					const Symbol::framelist_t& frames = symit->second.frames;
+					for(Symbol::framelist_t::const_iterator fit = frames.begin(); fit != frames.end(); ++fit) {
+						int depth = fit->getAtlasDepth();
+						if(sampler_offset == nil || depth < sampler_offset) {
+							sampler_offset = Just(depth);
+						}
+						if(max_depth == nil || depth > max_depth) {
+							max_depth = Just(depth);
+						}
+					}
+				}
+
+				if(max_depth - sampler_offset + 1 > int(atlases.size())) {
+					throw KToolsError("Build has symbol frames requesting atlases the build does not possess.");
+				}
+			}
+			return sampler_offset;
 		}
 
 		Symbol* getSymbol(hash_t h) {
@@ -382,6 +436,16 @@ namespace Krane {
 
 		const Symbol* getSymbol(const std::string& symname) const {
 			return getSymbol(strhash(symname));
+		}
+
+		uint32_t countFrames() const {
+			typedef symbolmap_t::const_iterator symbol_iter;
+
+			uint32_t n = 0;
+			for(symbol_iter it = symbols.begin(); it != symbols.end(); ++it) {
+				n += it->second.countFrames();
+			}
+			return n;
 		}
 
 		template<typename OutputIterator>
@@ -442,6 +506,22 @@ namespace Krane {
 			return build;
 		}
 
+		void setBuild(KBuild* b) {
+			build = b;
+		}
+
+		// Clears ownership without deleting anything.
+		void softClear() {
+			setBuild(NULL);
+		}
+
+		void clear() {
+			if(build != NULL) {
+				delete build;
+			}
+			softClear();
+		}
+
 		std::istream& load(std::istream& in, int verbosity);
 		void loadFrom(const std::string& path, int verbosity);
 
@@ -450,6 +530,9 @@ namespace Krane {
 		}
 
 		KBuildFile() : version(MAX_VERSION), build(NULL) {}
+		~KBuildFile() {
+			clear();
+		}
 	};
 }
 

@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+#include <cerrno>
 
 extern "C" {
 #if defined(HAVE_STDINT_H)
@@ -62,7 +63,7 @@ extern "C" {
 
 
 #ifndef HAVE_SNPRINTF
-int snprintf(char *str, size_t n, const char *fmt, ...);
+int snprintf(char *str, size_t n, const char *fmt, ...) PRINTFSTYLE(3, 4);
 #endif
 
 #ifndef RESTRICT
@@ -92,6 +93,13 @@ namespace KTools {
 		virtual ~Error() throw() {}
 	
 		virtual char const* what() const throw() { return cppwhat.c_str(); }
+
+	protected:
+		void setMessage(const std::string& cppwhat_) {
+			cppwhat = cppwhat_;
+		}
+
+		Error() : cppwhat() {}
 	
 	private:
 		std::string cppwhat;
@@ -99,8 +107,22 @@ namespace KTools {
 
 	class KToolsError : public Error {
 	public:
-		KToolsError(const std::string& kuwhat) : Error("Error: " + kuwhat) {}
+		KToolsError(const std::string& kuwhat) : Error(kuwhat) {}
 		virtual ~KToolsError() throw() {}
+	};
+
+	class SysError : public Error {
+	public:
+		SysError(const std::string& _what = "") : Error() {
+			std::string msg = _what;
+			if(errno != 0) {
+				if(msg.length() > 0) {
+					msg.append(": ");
+				}
+				msg.append(strerror(errno));
+			}
+			setMessage(msg);
+		}
 	};
 
 
@@ -145,25 +167,30 @@ namespace KTools {
 			return *this;
 		}
 
-		Maybe() : is_nothing(true) {}
-		Maybe(Nil) : is_nothing(true) {}
-		Maybe(const Maybe& m) { *this = m; }
-
-		template<typename U>
-		bool operator==(const Maybe<U>& m) const {
-			return is_nothing && m.is_nothing;
+		Maybe& operator=(Nil) {
+			is_nothing = true;
+			return *this;
 		}
+
+		Maybe() : is_nothing(true), val() {}
+		Maybe(Nil) : is_nothing(true), val() {}
+		Maybe(const Maybe& m) { *this = m; }
 
 		bool operator==(Nil) const {
 			return is_nothing;
 		}
 
-		friend bool operator==(Nil, const Maybe& m) {
+		friend inline bool operator==(Nil, const Maybe& m) {
 			return m.is_nothing;
 		}
 
 		bool operator==(const Maybe& m) const {
 			return (is_nothing && m.is_nothing) || (!is_nothing && !m.is_nothing && val == m.val);
+		}
+
+		template<typename U>
+		bool operator==(const Maybe<U>& m) const {
+			return is_nothing && m.is_nothing;
 		}
 
 		template<typename U>
@@ -188,7 +215,9 @@ namespace KTools {
 		return Maybe<T>(val);
 	}
 
-	int strformat(std::string& s, const char* fmt, ...);
+	int strformat_inplace(std::string& s, const char* fmt, ...) PRINTFSTYLE(2, 3);
+
+	std::string strformat(const char* fmt, ...) PRINTFSTYLE(1, 2);
 
 	/*
 	 * Each call destroys the validity of the last return.
@@ -200,6 +229,38 @@ namespace KTools {
 	public:
 		const char * operator()(const char * fmt, ...);
 	};
+
+	template<typename charT, typename charTraits>
+	inline bool check_basic_stream_validity(std::basic_ios<charT, charTraits>& file, const std::string& prefix, bool _throw) {
+		if(file.fail()) {
+			if(_throw) {
+				throw SysError(prefix);
+			}
+			return false;
+		}
+		return true;
+	}
+
+	inline bool check_stream_validity(std::istream& in, const std::string& fname = "file", bool _throw = true) {
+		(void)in.peek();
+		return check_basic_stream_validity(in, "Failed to open " + fname + " for reading", _throw);
+	}
+
+	inline bool check_stream_validity(std::ostream& out, const std::string& fname = "file", bool _throw = true) {
+		return check_basic_stream_validity(out, "Failed to open " + fname + " for writing", _throw);
+	}
 }
+
+
+#define MAGICK_WRAP(code) try {\
+	code ; \
+} \
+catch(Magick::WarningCoder& warning) { \
+	std::cerr << "Coder warning: " << warning.what() << std::endl; \
+} \
+catch(Magick::Warning& warning) { \
+	std::cerr << "Warning: " << warning.what() << std::endl; \
+}
+
 
 #endif
