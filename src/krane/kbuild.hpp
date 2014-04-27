@@ -490,7 +490,7 @@ namespace Krane {
 		void versionRequire() const {
 			if(!checkVersion()) {
 				std::cerr << "Build has unsupported encoding version " << version << "." << std::endl;
-				throw(KToolsError("Build has unsupported encoding version."));
+				throw(EncodingVersionError("Build has unsupported encoding version."));
 			}
 		}
 

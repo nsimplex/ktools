@@ -309,7 +309,12 @@ namespace Krane {
 			uvwtriangles[i].c = uvws[2];
 		}
 
-		atlas_depth = int(floorf(uvwdepth + 0.5f));
+		if(uvwdepth == nil) {
+			atlas_depth = 0;
+		}
+		else {
+			atlas_depth = int(floorf(uvwdepth + 0.5f));
+		}
 
 		updateAtlasBoundingBox();
 

@@ -111,6 +111,11 @@ namespace KTools {
 		virtual ~KToolsError() throw() {}
 	};
 
+	class EncodingVersionError : public KToolsError {
+	public:
+		EncodingVersionError(const std::string& _what) : KToolsError(_what) {}
+	};
+
 	class SysError : public Error {
 	public:
 		SysError(const std::string& _what = "") : Error() {

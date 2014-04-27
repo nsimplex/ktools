@@ -29,7 +29,7 @@ static void preprocess_input_list(pathlist_t& inputs) {
 	typedef pathlist_t::iterator iter_t;
 	typedef pathlist_t::value_type path_t;
 
-	for(iter_t it = inputs.begin(); it != inputs.end(); ++it) {
+	for(iter_t it = inputs.begin(); it != inputs.end();) {
 		if(!it->exists()) {
 			cerr << "Input path `" << *it << "' does not exist, skipping..." << endl;
 			inputs.erase(it++);
@@ -53,6 +53,9 @@ static void preprocess_input_list(pathlist_t& inputs) {
 			cerr << "Skipping TEX file `" << *it << "'..." << endl;
 			inputs.erase(it++);
 		}
+		else {
+			++it;
+		}
 	}
 
 	if(inputs.empty()) {
@@ -60,11 +63,27 @@ static void preprocess_input_list(pathlist_t& inputs) {
 	}
 }
 
+static std::string append_sentence(const std::string& original, const std::string& sentence) {
+	std::string ret = original;
+	if(ret.length() > 0 && ret[ret.length() - 1] != '.') {
+		ret.append('.', 1);
+	}
+	ret.append(sentence);
+	return ret;
+}
+
 static KBuild* load_build(std::istream& in, const pathlist_t::value_type& inputdir) {
 	typedef KBuild::atlaslist_t::iterator atlasiter_t;
 
 	KBuildFile bildfile;
-	bildfile.load(in, options::verbosity);
+
+	try {
+		bildfile.load(in, options::verbosity);
+	}
+	catch(std::exception& e) {
+		cerr << "ERROR: " << append_sentence(e.what(), "Skipping build file.") << endl;
+		return NULL;
+	}
 
 	KBuild* bild = bildfile.getBuild();
 	if(options::allowed_build != nil && bild->getName() != options::allowed_build.value()) {
@@ -83,7 +102,14 @@ static void load_anims(std::istream& in, KAnimBankCollection& banks) {
 	typedef KAnimFile<> animfile_t;
 
 	animfile_t animfile;
-	animfile.load(in, options::verbosity);
+
+	try {
+		animfile.load(in, options::verbosity);
+	}
+	catch(std::exception& e) {
+		cerr << "ERROR: " << append_sentence(e.what(), "Skipping animation file.") << endl;
+		return;
+	}
 
 	banks.addAnims( animfile.anims.begin(), animfile.anims.end() );
 
@@ -125,13 +151,11 @@ static KBuild* process_input_list(const pathlist_t& inputs, KAnimBankCollection&
 				cout << "Loading anims from `" << *it << "'..." << endl;
 			}
 			load_anims(*in, banks);
-			break;
 		}
 		else {
 			delete in;
 			delete bild;
 			throw KToolsError("Input file `" + *it + "' has unknown type.");
-			break;
 		}
 
 		delete in;

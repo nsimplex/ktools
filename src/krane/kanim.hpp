@@ -318,7 +318,7 @@ namespace Krane {
 		void versionRequire() const {
 			if(!checkVersion()) {
 				std::cerr << "Animation file has unsupported encoding version " << version << "." << std::endl;
-				throw(KToolsError("Animation has unsupported encoding version."));
+				throw(EncodingVersionError("Animation has unsupported encoding version."));
 			}
 		}
 
