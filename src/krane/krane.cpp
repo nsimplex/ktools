@@ -66,7 +66,7 @@ static void preprocess_input_list(pathlist_t& inputs) {
 static std::string append_sentence(const std::string& original, const std::string& sentence) {
 	std::string ret = original;
 	if(ret.length() > 0 && ret[ret.length() - 1] != '.') {
-		ret.append('.', 1);
+		ret.append(". ", 2);
 	}
 	ret.append(sentence);
 	return ret;
@@ -80,7 +80,7 @@ static KBuild* load_build(std::istream& in, const pathlist_t::value_type& inputd
 	try {
 		bildfile.load(in, options::verbosity);
 	}
-	catch(std::exception& e) {
+	catch(KToolsError& e) {
 		cerr << "ERROR: " << append_sentence(e.what(), "Skipping build file.") << endl;
 		return NULL;
 	}
@@ -106,7 +106,7 @@ static void load_anims(std::istream& in, KAnimBankCollection& banks) {
 	try {
 		animfile.load(in, options::verbosity);
 	}
-	catch(std::exception& e) {
+	catch(KToolsError& e) {
 		cerr << "ERROR: " << append_sentence(e.what(), "Skipping animation file.") << endl;
 		return;
 	}
