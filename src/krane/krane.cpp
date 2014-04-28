@@ -9,6 +9,9 @@ using namespace std;
 typedef std::list<KTools::VirtualPath> pathlist_t;
 
 static Magick::Image load_vanilla_image(const Compat::Path& path) {
+	if(options::verbosity >= 0) {
+		cout << "Loading image from " << path << "..." << endl;
+	}
 	Magick::Image img;
 	try {
 		img.read(path);
@@ -24,14 +27,15 @@ static Magick::Image load_vanilla_image(const Compat::Path& path) {
 }
 
 static Magick::Image load_image(const Compat::Path& path) {
-	if(!path.exists()) {
-		throw(Error("The path " + path + " does not exist."));
-	}
-
 	if(!path.exists() && path.hasExtension("tex"))
 	{
 		Compat::Path newpath = path;
 		newpath.replaceExtension("png");
+
+		if(!newpath.exists()) {
+			throw KToolsError("the path `" + path + "' does not exist.");
+		}
+
 		return load_vanilla_image(newpath);
 	}
 
