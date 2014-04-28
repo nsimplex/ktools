@@ -48,6 +48,8 @@ namespace Krane {
 
 		bool check_animation_fidelity = false;
 
+		bool mark_atlas = false;
+
 		int verbosity = 0;
 		bool info = false;
 	}
@@ -64,6 +66,8 @@ static const std::string TO_SCML = "Options for scml output";
 /*
 static const std::string TO_BIN = "Options for binary output";
 */
+static const std::string OUTPUT_CTRL = "Options controlling the output mode";
+static const std::string INPUT_CTRL = "Options filtering input selection";
 
 void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools::VirtualPath>& input_paths, Compat::Path& output_path) {
 	using namespace Krane;
@@ -86,7 +90,10 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 		}
 
 		
+		myOutput.addCategory(INPUT_CTRL);
+		myOutput.addCategory(OUTPUT_CTRL);
 		myOutput.addCategory(TO_SCML);
+		//myOutput.addCategory(TO_BIN);
 
 
 		/*
@@ -96,19 +103,23 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 
 		MyValueArg<string> allowed_build_opt("", "build", "Selects only a build with the given name.", false, "", "build name");
 		args.push_back(&allowed_build_opt);
-		myOutput.setArgCategory(allowed_build_opt, TO_SCML);
+		myOutput.setArgCategory(allowed_build_opt, INPUT_CTRL);
 
 		MyMultiArg<string> allowed_banks_opt("", "bank", "Selects only animations in the given banks.", false, "bank name");
 		args.push_back(&allowed_banks_opt);
-		myOutput.setArgCategory(allowed_banks_opt, TO_SCML);
+		myOutput.setArgCategory(allowed_banks_opt, INPUT_CTRL);
+
+		SwitchArg mark_atlas_opt("", "mark-atlases", "Instead of performing any conversion, saves the atlases in the specified build as PNG, with their clipped regions shaded grey.");
+		args.push_back(&mark_atlas_opt);
+		myOutput.setArgCategory(mark_atlas_opt, OUTPUT_CTRL);
 
 		MyValueArg<string> build_rename_opt("", "rename-build", "Renames the input build to the given name.", false, "", "build name");
 		args.push_back(&build_rename_opt);
-		myOutput.setArgCategory(build_rename_opt, TO_SCML);
+		//myOutput.setArgCategory(build_rename_opt, TO_SCML);
 
 		MyValueArg<string> banks_rename_opt("", "rename-bank", "Renames the input banks to the given name.", false, "", "bank name");
 		args.push_back(&banks_rename_opt);
-		myOutput.setArgCategory(banks_rename_opt, TO_SCML);
+		//myOutput.setArgCategory(banks_rename_opt, TO_SCML);
 
 		SwitchArg check_anim_fidelity_opt("", "check-animation-fidelity", "Checks if the Spriter representation of the animations is faithful to the source animations.");
 		args.push_back(&check_anim_fidelity_opt);
@@ -147,6 +158,7 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 			const vector<string>& banks = allowed_banks_opt.getValue();
 			options::allowed_banks.insert(options::allowed_banks.begin(), banks.begin(), banks.end());
 		}
+		options::mark_atlas = mark_atlas_opt.getValue();
 		if(build_rename_opt.isSet()) {
 			options::build_rename = Just(build_rename_opt.getValue());
 		}

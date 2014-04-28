@@ -8,9 +8,31 @@ using namespace std;
 
 typedef std::list<KTools::VirtualPath> pathlist_t;
 
-Magick::Image load_image(const Compat::Path& path) {
+static Magick::Image load_vanilla_image(const Compat::Path& path) {
+	Magick::Image img;
+	try {
+		img.read(path);
+	}
+	catch(Magick::Warning& w) {
+		if(img.columns() == 0) {
+			throw;
+		}
+		std::cerr << "WARNING: " << w.what() << endl;
+	}
+	img.flip();
+	return img;
+}
+
+static Magick::Image load_image(const Compat::Path& path) {
 	if(!path.exists()) {
 		throw(Error("The path " + path + " does not exist."));
+	}
+
+	if(!path.exists() && path.hasExtension("tex"))
+	{
+		Compat::Path newpath = path;
+		newpath.replaceExtension("png");
+		return load_vanilla_image(newpath);
 	}
 
 	if(path.hasExtension("tex")) {
@@ -20,9 +42,7 @@ Magick::Image load_image(const Compat::Path& path) {
 		return ktex.Decompress();
 	}
 	else {
-		Magick::Image img;
-		MAGICK_WRAP(img.read(path));
-		return img;
+		return load_vanilla_image(path);
 	}
 }
 
@@ -148,10 +168,12 @@ static KBuild* process_input_list(const pathlist_t& inputs, KAnimBankCollection&
 			}
 		}
 		else if(magic_number == GenericKAnimFile::MAGIC_NUMBER) {
-			if(options::verbosity >= 0) {
-				cout << "Loading anims from `" << *it << "'..." << endl;
+			if(!options::mark_atlas) {
+				if(options::verbosity >= 0) {
+					cout << "Loading anims from `" << *it << "'..." << endl;
+				}
+				load_anims(*in, banks);
 			}
-			load_anims(*in, banks);
 		}
 		else {
 			delete in;
@@ -177,6 +199,88 @@ static void configure_bank_collection(KAnimBankCollection& banks) {
 			s->addBank(*it);
 		}
 		banks.setSelector(s);
+	}
+}
+
+static void sanitize_output_png(Magick::Image& img) {
+	img.type(Magick::TrueColorMatteType);
+	img.colorSpace(Magick::sRGBColorspace);
+
+	// png color type 6 means RGBA
+	img.defineValue("png", "color-type", "6");
+}
+
+static void perform_SCML_conversion(const Compat::Path& output_path, KBuild* bild, KAnimBankCollection& banks) {
+	typedef std::vector< std::pair<Compat::Path, Magick::Image> > imglist_t;
+
+	if(bild == NULL) {
+		throw KToolsError("No build found in the input files.");
+	}
+	if(banks.empty()) {
+		throw KToolsError("No animation found in the input files.");
+	}
+
+	if(options::build_rename != nil) {
+		if(options::verbosity >= 0) {
+			cout << "Renaming build..." << endl;
+		}
+		bild->setName(options::build_rename);
+	}
+
+	if(options::verbosity >= 0) {
+		cout << "Splicing build atlas..." << endl;
+	}
+
+	imglist_t imglist;
+	imglist.reserve(bild->countFrames());
+	bild->getImages( back_inserter(imglist) );
+
+	if(options::verbosity >= 0) {
+		cout << "Saving frame images..." << endl;
+	}
+	for(imglist_t::iterator it = imglist.begin(); it != imglist.end(); ++it) {
+		Compat::Path imgoutpath = output_path/it->first;
+
+		if(!imgoutpath.dirname().mkdir()) {
+			throw SysError("Failed to create directory " + imgoutpath.dirname());
+		}
+
+		Magick::Image img = it->second;
+
+		sanitize_output_png(img);
+
+		MAGICK_WRAP(img.write(imgoutpath));
+	}
+
+	if(options::verbosity >= 0) {
+		cout << "Writing scml..." << endl;
+	}
+	Compat::Path scml_path = output_path/bild->getName() + ".scml";
+	ofstream scml(scml_path.c_str());
+	check_stream_validity(scml, scml_path);
+	exportToSCML(scml, *bild, banks);
+
+	if(options::verbosity >= 0) {
+		cout << "Done." << endl;
+	}
+}
+
+static void perform_atlas_marking(const Compat::Path& output_path, KBuild* bild) {
+	typedef std::vector< std::pair<Compat::Path, Magick::Image> > atlaslist_t;
+
+	atlaslist_t markedatlases;
+	markedatlases.reserve( bild->atlases.size() );
+
+	bild->getMarkedAtlases( std::back_inserter(markedatlases), Magick::ColorRGB(0.3, 0.3, 0.3) );
+
+	for(atlaslist_t::iterator it = markedatlases.begin(); it != markedatlases.end(); ++it) {
+		Compat::Path atlaspath = output_path;
+		atlaspath /= it->first;
+		atlaspath.replaceExtension("png");
+
+		sanitize_output_png(it->second);
+
+		it->second.write(std::string(atlaspath));
 	}
 }
 
@@ -206,60 +310,15 @@ int main(int argc, char* argv[]) {
 
 		bild = process_input_list(input_paths, banks);
 
-		if(bild == NULL) {
-			throw KToolsError("No build found in the input files.");
+		if(options::mark_atlas) {
+			perform_atlas_marking(output_path, bild);
 		}
-		if(banks.empty()) {
-			throw KToolsError("No animation found in the input files.");
-		}
-
-		if(options::build_rename != nil) {
-			if(options::verbosity >= 0) {
-				cout << "Renaming build..." << endl;
-			}
-			bild->setName(options::build_rename);
+		else {
+			perform_SCML_conversion(output_path, bild, banks);
 		}
 
-		if(options::verbosity >= 0) {
-			cout << "Splicing build atlas..." << endl;
-		}
-
-		imglist_t imglist;
-		imglist.reserve(bild->countFrames());
-		bild->getImages( back_inserter(imglist) );
-
-		if(options::verbosity >= 0) {
-			cout << "Saving frame images..." << endl;
-		}
-		for(imglist_t::iterator it = imglist.begin(); it != imglist.end(); ++it) {
-			Compat::Path imgoutpath = output_path/it->first;
-
-			if(!imgoutpath.dirname().mkdir()) {
-				throw SysError("Failed to create directory " + imgoutpath.dirname());
-			}
-
-			Magick::Image img = it->second;
-
-			img.type(Magick::TrueColorMatteType);
-			img.colorSpace(Magick::sRGBColorspace);
-
-			// png color type 6 means RGBA
-			img.defineValue("png", "color-type", "6");
-
-			MAGICK_WRAP(img.write(imgoutpath));
-		}
-
-		if(options::verbosity >= 0) {
-			cout << "Writing scml..." << endl;
-		}
-		Compat::Path scml_path = output_path/bild->getName() + ".scml";
-		ofstream scml(scml_path.c_str());
-		check_stream_validity(scml, scml_path);
-		exportToSCML(scml, *bild, banks);
-
-		if(options::verbosity >= 0) {
-			cout << "Done." << endl;
-		}
+		delete bild;
+		bild = NULL;
 	}
 	catch(std::exception& e) {
 		cerr << "ERROR: " << e.what() << endl;

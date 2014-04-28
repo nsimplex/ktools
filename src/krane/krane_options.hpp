@@ -34,6 +34,8 @@ namespace Krane {
 
 		extern bool check_animation_fidelity;
 
+		extern bool mark_atlas;
+
 		extern int verbosity;
 		extern bool info;
 	}

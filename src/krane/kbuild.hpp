@@ -142,6 +142,22 @@ namespace Krane {
 					return 3*countTriangles();
 				}
 
+				void getGeometry(Magick::Geometry& geo) const;
+
+				Magick::Geometry getGeometry() const {
+					Magick::Geometry geo;
+					getGeometry(geo);
+					return geo;
+				}
+
+				/*
+				 * Returns the clipping mask as a monochrome image with black
+				 * on the region allowed to pass through.
+				 *
+				 * The image has the size of the frame's bounding box.
+				 */
+				Magick::Image getClipMask() const HOTFUNCTION;
+
 				Magick::Image getImage() const HOTFUNCTION;
 
 				void getName(std::string& s) const {
@@ -459,6 +475,38 @@ namespace Krane {
 				}
 			}
 		}
+
+		/*
+		 * Clipping mask for the whole atlas with the given numerical id.
+		 *
+		 * Follows the same conventions as the symbol frame clipping mask.
+		 */
+		Magick::Image getClipMask(size_t idx) const HOTFUNCTION;
+
+		// Gets all clip masks.
+		template<typename OutputIterator>
+		void getClipMasks(OutputIterator it) const {
+			size_t idx = 0;
+			for(atlaslist_t::const_iterator atit = atlases.begin(); atit != atlases.end(); ++atit) {
+				*it++ = getClipMask(idx++);
+			}
+		}
+
+		/*
+		 * Returns the atlas with the given numerical id with its clipped off
+		 * regions marked with the given color.
+		 */
+		Magick::Image getMarkedAtlas(size_t idx, Magick::Color c) const HOTFUNCTION;
+
+		// Gets all marked atlases.
+		template<typename OutputIterator>
+		void getMarkedAtlases(OutputIterator it, Magick::Color c) const {
+			size_t idx = 0;
+			for(atlaslist_t::const_iterator atit = atlases.begin(); atit != atlases.end(); ++atit) {
+				*it++ = std::make_pair( atit->first, getMarkedAtlas(idx++, c) );
+			}
+		}
+
 
 	private:
 		std::istream& load(std::istream& in, int verbosity);
