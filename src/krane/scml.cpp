@@ -1,4 +1,5 @@
 #include "scml.hpp"
+#include "krane_options.hpp"
 #include <pugixml/pugixml.hpp>
 
 #include <limits>
@@ -14,6 +15,9 @@ using namespace pugi;
 //static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
 
 static const computations_float_type TIME_SCALE = 1;
+
+// Tolerance for the square distance of matrices.
+static const computations_float_type MATRIX_EPS = 0.5;
 
 /***********************************************************************/
 
@@ -213,6 +217,20 @@ namespace {
 			if(timeline) {
 				setDupedName();
 			}
+		}
+
+		std::string getAnimationName() const {
+			if(!timeline) {
+				return "";
+			}
+			return timeline.parent().attribute("name").as_string();
+		}
+
+		std::string getName() const {
+			if(!timeline) {
+				return "";
+			}
+			return timeline.attribute("name").as_string();
 		}
 
 		xml_node getTimeline() const {
@@ -554,14 +572,48 @@ struct matrix_components {
 	{}
 };
 
+template<typename MatrixTypeA, typename MatrixTypeB>
+static typename MatrixTypeA::value_type matrix_distsq(const MatrixTypeA& A, const MatrixTypeB& B) {
+	typedef typename MatrixTypeA::value_type f_t;
+
+	f_t a = A[0][0] - B[0][0];
+	f_t b = A[0][1] - B[0][1];
+	f_t c = A[1][0] - B[1][0];
+	f_t d = A[1][1] - B[1][1];
+
+	return a*a + b*b + c*c + d*d;
+}
+
+static SquareMatrix<2, computations_float_type> rotationMatrix(computations_float_type theta) {
+	typedef computations_float_type f_t;
+	f_t c = cos(theta);
+	f_t s = sin(theta);
+
+	SquareMatrix<2, f_t> M = nil;
+	M[0][0] = c;
+	M[0][1] = -s;
+	M[1][0] = s;
+	M[1][1] = c;
+
+	return M;
+}
+
+static SquareMatrix<2, computations_float_type> scaleMatrix(computations_float_type x, computations_float_type y) {
+	typedef computations_float_type f_t;
+	
+	SquareMatrix<2, f_t> M;
+	M[0][0] = x;
+	M[1][1] = y;
+
+	return M;
+}
+
 /*
  * Decomposes (approximately if this is not possible exactly) a matrix into xy scalings and a rotation angle in radians.
  *
  * In Spriter, scaling is applied before rotation.
  *
  * Since the decomposition is not unique, the x scale is imposed to always be non-negative.
- *
- * Recall that the y coordinate is flipped in the conversion.
  *
  * The result is stored in ret, and last holds the last batch of results
  * (the ones relevant for further computation, anyway)
@@ -642,6 +694,14 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 		matrix_components geo;
 		decomposeMatrix(M, geo, last_result);
+
+		if(options::check_animation_fidelity) {
+			computations_float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
+			if(mdsq > MATRIX_EPS) {
+				cerr << "WARNING: frame " << key_id << " of animation symbol " << animsymmeta.getName() << " in animation " << animsymmeta.getAnimationName() << " has a geometry not representable in Spriter. Precision lost, expect ugly result. (matrix distance: " << sqrt(mdsq) << ")" << endl;
+			}
+		}
+
 		if(geo.angle < 0) {
 			geo.angle += 2*M_PI;
 		}

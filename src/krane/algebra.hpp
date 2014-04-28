@@ -157,7 +157,7 @@ namespace KTools {
 		SquareMatrix() : super() {
 			setDiagonal(1);
 		}
-		explicit SquareMatrix(Nil) : super(nil) {}
+		SquareMatrix(Nil) : super(nil) {}
 		explicit SquareMatrix(T diag) : super() {
 			setDiagonal(diag);
 		}
@@ -274,7 +274,7 @@ namespace KTools {
 		typedef affine_vector_type projective_vector_type;
 
 		ProjectiveMatrix() : super() {}
-		explicit ProjectiveMatrix(Nil) : super(nil) {}
+		ProjectiveMatrix(Nil) : super(nil) {}
 		ProjectiveMatrix(T diag) : super(diag) {}
 		ProjectiveMatrix(const ProjectiveMatrix& A) : super(A) {}
 		explicit ProjectiveMatrix(const super& A) : super(A) {}

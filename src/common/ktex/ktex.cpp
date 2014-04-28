@@ -386,7 +386,9 @@ Magick::Image KTools::KTEX::File::DecompressMipmap(const KTools::KTEX::File::Mip
 	}
 
 
-	img.flip();
+	if(flip_image) {
+		img.flip();
+	}
 
 	return img;
 }
@@ -403,7 +405,9 @@ void KTools::KTEX::File::CompressMipmap(KTools::KTEX::File::Mipmap& M, const KTo
 		}
 	}
 
-	img.flip();
+	if(flip_image) {
+		img.flip();
+	}
 
 	int width = (int)img.columns();
 	int height = (int)img.rows();

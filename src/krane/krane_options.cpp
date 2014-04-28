@@ -46,6 +46,8 @@ namespace Krane {
 
 		Maybe<std::string> banks_rename;
 
+		bool check_animation_fidelity = false;
+
 		int verbosity = 0;
 		bool info = false;
 	}
@@ -108,6 +110,10 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 		args.push_back(&banks_rename_opt);
 		myOutput.setArgCategory(banks_rename_opt, TO_SCML);
 
+		SwitchArg check_anim_fidelity_opt("", "check-animation-fidelity", "Checks if the Spriter representation of the animations is faithful to the source animations.");
+		args.push_back(&check_anim_fidelity_opt);
+		myOutput.setArgCategory(check_anim_fidelity_opt, TO_SCML);
+
 		MultiSwitchArg verbosity_flag("v", "verbose", "Increases output verbosity.");
 		args.push_back(&verbosity_flag);
 
@@ -147,6 +153,7 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 		if(banks_rename_opt.isSet()) {
 			options::banks_rename = Just(banks_rename_opt.getValue());
 		}
+		options::check_animation_fidelity = check_anim_fidelity_opt.getValue();
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;

@@ -15,6 +15,7 @@ Magick::Image load_image(const Compat::Path& path) {
 
 	if(path.hasExtension("tex")) {
 		KTEX::File ktex;
+		ktex.flipImage(false);
 		ktex.loadFrom(path, 0);
 		return ktex.Decompress();
 	}

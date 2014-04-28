@@ -31,7 +31,7 @@ namespace Krane {
 			h0 = atlas.rows();
 
 			offset[0] = w0*atlas_bbox.x();
-			offset[1] = h0*(1 - atlas_bbox.ymax());
+			offset[1] = h0*atlas_bbox.y();
 
 			Geometry cropgeo;
 			cropgeo.xOff(size_t( floor(offset[0]) ));
@@ -40,7 +40,13 @@ namespace Krane {
 			cropgeo.height(size_t( floor(h0*atlas_bbox.h()) ));
 
 			quad = atlas;
-			MAGICK_WRAP(quad.crop(cropgeo));
+			try {
+				quad.crop(cropgeo);
+			}
+			catch(Magick::Warning& w) {
+				cerr << w.what() << endl;
+				cerr << "When cropping " << int(w0) << "x" << int(h0) << " atlas " << parent->parent->atlases[getAtlasIdx()].first << " to " << cropgeo.width() << "x" << cropgeo.height() << "+" << cropgeo.xOff() << "+" << cropgeo.yOff() << " to select image " << getUnixPath() << endl;
+			}
 		}
 
 
@@ -59,9 +65,9 @@ namespace Krane {
 		for(size_t i = 0; i < ntrigs; i++) {
 			const uvwtriangle_type& trig = uvwtriangles[i];
 
-			coords.push_back( Coordinate(trig.a[0]*w0 - offset[0], (1 - trig.a[1])*h0 - offset[1]) );
-			coords.push_back( Coordinate(trig.b[0]*w0 - offset[0], (1 - trig.b[1])*h0 - offset[1]) );
-			coords.push_back( Coordinate(trig.c[0]*w0 - offset[0], (1 - trig.c[1])*h0 - offset[1]) );
+			coords.push_back( Coordinate(trig.a[0]*w0 - offset[0], trig.a[1]*h0 - offset[1]) );
+			coords.push_back( Coordinate(trig.b[0]*w0 - offset[0], trig.b[1]*h0 - offset[1]) );
+			coords.push_back( Coordinate(trig.c[0]*w0 - offset[0], trig.c[1]*h0 - offset[1]) );
 
 			drawable_trigs.push_back( DrawablePolygon(coords) );
 			coords.clear();
@@ -80,7 +86,15 @@ namespace Krane {
 		scaling_geo.aspect(true);
 		scaling_geo.width(bbox.int_w());
 		scaling_geo.height(bbox.int_h());
-		MAGICK_WRAP(img.resize(scaling_geo));
+		try {
+			img.resize(scaling_geo);
+		}
+		catch(Magick::Warning& w) {
+			cerr << w.what() << endl;
+			cerr << "When reszing " << img.columns() << "x" << img.rows() << " image " << getUnixPath() << " to " << scaling_geo.width() << "x" << scaling_geo.height() << endl;
+		}
+
+		img.flip();
 
 		return img;
 	}

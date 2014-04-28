@@ -186,8 +186,14 @@ namespace KTools {
 
 			void CompressMipmap(Mipmap& M, const CompressionFormat& fmt, Magick::Image img, int verbosity = -1) const;
 
+			bool flip_image;
+
 		public:
 			static bool isKTEXFile(const std::string& path);
+
+			void flipImage(bool b) {
+				flip_image = b;
+			}
 
 			void print(std::ostream& out, int verbosity = -1, size_t indentation = 0, const std::string& indent_string = "\t") const;
 			std::ostream& dump(std::ostream& out, int verbosity = -1) const;
@@ -248,8 +254,8 @@ namespace KTools {
 				}
 			}
 
-			File() : header(), io(header.io), Mipmaps(NULL) {}
-			~File() { deallocateMipmaps(); }
+			File() : header(), io(header.io), Mipmaps(NULL), flip_image(true) {}
+			virtual ~File() { deallocateMipmaps(); }
 		};
 
 

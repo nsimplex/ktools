@@ -32,6 +32,8 @@ namespace Krane {
 
 		extern Maybe<std::string> banks_rename;
 
+		extern bool check_animation_fidelity;
+
 		extern int verbosity;
 		extern bool info;
 	}
