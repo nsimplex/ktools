@@ -63,7 +63,12 @@ extern "C" {
 
 
 #ifndef HAVE_SNPRINTF
+#	ifdef HAVE__SNPRINTF
+#		define snprintf _snprintf
+#		define HAVE_SNPRINTF 1
+#	else
 int snprintf(char *str, size_t n, const char *fmt, ...) PRINTFSTYLE(3, 4);
+#	endif
 #endif
 
 #ifndef RESTRICT

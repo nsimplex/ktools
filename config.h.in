@@ -30,6 +30,8 @@
 
 #cmakedefine HAVE_SNPRINTF
 
+#cmakedefine HAVE__SNPRINTF
+
 #cmakedefine HAVE_MODE_T
 
 #cmakedefine HAVE_RESTRICT
