@@ -190,5 +190,4 @@ For Visual Studio, open the ALL_BUILD.vcxproj file, right click the 'ktools' sol
 
 
 ## LICENSE
----------
 See NOTICE.txt.
