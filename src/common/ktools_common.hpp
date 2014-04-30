@@ -85,6 +85,9 @@ int snprintf(char *str, size_t n, const char *fmt, ...) PRINTFSTYLE(3, 4);
 
 
 namespace KTools {
+	void initialize_application(int& argc, char **& argv);
+
+
 	enum ExitStatus {
 		MagickErrorCode = 1,
 		KTEXErrorCode = 2,

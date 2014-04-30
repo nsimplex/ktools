@@ -76,4 +76,31 @@ namespace KTools {
 			return NULL;
 		}
 	}
+
+
+
+	void initialize_application(int& argc, char**& argv) {
+		using namespace Compat;
+		(void)argc;
+
+#if defined(IS_WINDOWS) && defined(BUNDLED_DEPENDENCIES)
+		static const char codeerpath_varname[] = "MAGICK_CODER_MODULE_PATH";
+		static const char filtpath_varname[] = "MAGICK_FILTER_MODULE_PATH";
+
+		Path curdir = Path(argv[0]).dirname();
+
+#	ifdef _MSC_VER
+#		define SETENVVAR(name, value) _putenv_s(name, value)
+#	else
+#		define SETENVVAR(name, value) setenv(name, value, 1)
+#	endif
+
+		SETENVVAR(coderpath_varname, curdir.c_str());
+		SETENVVAR(filtpath_varname, curdir.c_str());
+
+#	undef SETENVVAR
+#endif
+
+		Magick::InitializeMagick(argv[0]);
+	}
 }

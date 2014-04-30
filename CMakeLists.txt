@@ -6,6 +6,7 @@ set(PACKAGE_VERSION_MINOR 0)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
 
 OPTION(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
+OPTION(BUNDLED_DEPENDENCIES "Build under the assumption dependencies will be bundled with the executable." OFF)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/out_of_source_build.cmake)
 ENSURE_OUT_OF_SOURCE_BUILD( "${PROJECT_SOURCE_DIR}/build" )
@@ -37,8 +38,13 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/OptimizeForArchitecture.cma
 
 
 set(CMAKE_BUILD_TYPE Release)
+
+
 if(NOT DISABLE_CPU_EXTENSIONS)
 	OptimizeForArchitecture()
+endif()
+if(BUNDLED_DEPENDENCIES)
+	add_definitions(-DBUNDLED_DEPENDENCIES=1)
 endif()
 
 

@@ -302,7 +302,7 @@ static void split(OutputIterator it, const string& str, const std::string& sep) 
  */
 int main(int argc, char* argv[]) {
 	try {
-		Magick::InitializeMagick(argv[0]);
+		initialize_application(argc, argv);
 
 		string input_path_str, output_path_str;
 		KTEX::File::Header configured_header = parse_commandline_options(argc, argv, input_path_str, output_path_str);
