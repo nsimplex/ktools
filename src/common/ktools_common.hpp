@@ -157,7 +157,7 @@ namespace KTools {
 		U second;
 	};
 
-	static const class Nil {} nil;
+	static const class Nil { public: Nil() {} } nil;
 
 	template<typename T> class Maybe;
 
