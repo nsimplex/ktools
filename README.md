@@ -3,7 +3,7 @@
 A set of cross-platform modding tools for the game [Don't Starve](http://www.dontstarvegame.com/), by [Klei Entertainment](http://kleientertainment.com/).
 
 
-**IMPORTANT**: In what follows, a code block starting with a '$' indicated something that should be typed in a terminal (cmd.exe, for Windows). The '$' and the space following it should not be typed.
+**IMPORTANT**: In what follows, a code block starting with a '$' indicates something that should be typed in a terminal (cmd.exe, for Windows). The '$' and the space following it should not be typed.
 
 
 ## ktech
