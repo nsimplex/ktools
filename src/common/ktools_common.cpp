@@ -84,7 +84,7 @@ namespace KTools {
 		(void)argc;
 
 #if defined(IS_WINDOWS) && defined(BUNDLED_DEPENDENCIES)
-		static const char codeerpath_varname[] = "MAGICK_CODER_MODULE_PATH";
+		static const char coderpath_varname[] = "MAGICK_CODER_MODULE_PATH";
 		static const char filtpath_varname[] = "MAGICK_FILTER_MODULE_PATH";
 
 		Path curdir = Path(argv[0]).dirname();
