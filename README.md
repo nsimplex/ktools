@@ -3,7 +3,7 @@
 A set of cross-platform modding tools for the game [Don't Starve](http://www.dontstarvegame.com/), by [Klei Entertainment](http://kleientertainment.com/).
 
 
-*IMPORTANT*: In what follows, a code block starting with a '$' indicated something that should be typed in a terminal (cmd.exe, for Windows). The '$' and the space following it should not be typed.
+**IMPORTANT**: In what follows, a code block starting with a '$' indicated something that should be typed in a terminal (cmd.exe, for Windows). The '$' and the space following it should not be typed.
 
 
 ## ktech
@@ -113,7 +113,10 @@ The last argument to krane is always taken to be the output directory, which is 
 
 Not all of Don't Starve's animations can be faithfully represented as a Spriter project, since Spriter's animation representation is much more restrictive than Don't Starve's native one (it doesn't support shearing, for example). The option `--check-animation-fidelity` will check for and print the cases where animation precision is lost.
 
-Another use for krane is marking an atlas with the regions which get clipped by the game (shading them in grey), which is meant as an aid for atlas editing. This mode of use is triggered by the `--mark-atlases` option. When this option is given, only a build file should be given as input (any animation files are ignored), which is used to determine the clipping region. The shaded atlases are placed in the output directory (the last argument), as PNG images.
+Another use for krane is marking an atlas with the regions which get clipped by the game (shading them in grey), which is meant as an aid for atlas editing. This mode of use is triggered by the `--mark-atlases` option. When this option is given, only a build file should be given as input (any animation files are ignored), which is used to determine the clipping region. The shaded atlases are placed in the output directory (the last argument), as PNG images. The following will place the shaded atlases of build.bin in output_dir:
+```
+$ krane --mark-atlases build.bin output_dir
+```
 
 ### Full usage
 The following message (possibly more up to date than what is documented here) may be obtained by entering
