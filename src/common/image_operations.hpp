@@ -66,8 +66,8 @@ namespace KTools { namespace ImOp {
 		using namespace Magick;
 
 		const double result = factor*q;
-		if(result >= MaxRGB) {
-			return MaxRGB;
+		if(result >= QuantumRange) {
+			return QuantumRange;
 		}
 		else {
 			return Quantum(result);
@@ -79,7 +79,7 @@ namespace KTools { namespace ImOp {
 		void operator()(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
-			double a = 1 - double(p->opacity)/MaxRGB;
+			double a = 1 - double(p->opacity)/QuantumRange;
 			if(a <= 0.1) a = 0;
 			else if(a >= 1) a = 1;
 
@@ -94,7 +94,7 @@ namespace KTools { namespace ImOp {
 		void operator()(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
-			const double a = 1 - double(p->opacity)/MaxRGB;
+			const double a = 1 - double(p->opacity)/QuantumRange;
 			if(a <= 0 || a >= 1) return;
 
 			const double inva = 1/a;

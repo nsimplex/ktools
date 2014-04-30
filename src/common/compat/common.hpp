@@ -21,7 +21,7 @@
 #endif
 
 #if !defined(HAVE_MODE_T)
-typedef int mode_t
+typedef int mode_t;
 #endif
 
 #ifdef __GNUC__
@@ -36,6 +36,15 @@ typedef int mode_t
 #	define CONSTFUNCTION
 #	define PUREFUNCTION
 #	define HOTFUNCTION
+#endif
+
+#ifdef IS_WINDOWS
+#	ifndef _USE_MATH_DEFINES
+#		define _USE_MATH_DEFINES 1
+#	endif
+#	ifndef NOMINMAX
+#		define NOMINMAX 1
+#	endif
 #endif
 
 #endif

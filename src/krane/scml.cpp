@@ -677,6 +677,13 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	 */
 	matrix_components last_result;
 
+	/*
+	 * Stores the maximum square "badness" of the symbol, over all its frames.
+	 *
+	 * Only used when the --check-animation-fidelity option is given.
+	 */
+	Maybe<computations_float_type> symbol_sqbadness;
+
 	int key_id = 0;
 	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
 		const AnimationSymbolFrameMetadata& animsymframemeta = *animsymframeiter;
@@ -697,8 +704,8 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 		if(options::check_animation_fidelity) {
 			computations_float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
-			if(mdsq > MATRIX_EPS) {
-				cerr << "WARNING: frame " << key_id << " of animation symbol " << animsymmeta.getName() << " in animation " << animsymmeta.getAnimationName() << " has a geometry not representable in Spriter. Precision lost, expect ugly result. (matrix distance: " << sqrt(mdsq) << ")" << endl;
+			if(mdsq > MATRIX_EPS && (symbol_sqbadness == nil || symbol_sqbadness.value() < mdsq)) {
+				symbol_sqbadness = Just(mdsq);
 			}
 		}
 
@@ -720,5 +727,9 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		object.append_attribute("scale_x") = geo.scale_x;
 		object.append_attribute("scale_y") = geo.scale_y;
 		object.append_attribute("angle") = geo.angle;
+	}
+
+	if(symbol_sqbadness != nil) {
+		cerr << "WARNING: the geometry of animation symbol \"" << animsymmeta.getName() << "\" in animation \"" << animsymmeta.getAnimationName() << "\" is not fully representable in Spriter. Precision lost, expect ugly result. (max matrix distance: " << sqrt(symbol_sqbadness.value()) << ")" << endl;
 	}
 }
