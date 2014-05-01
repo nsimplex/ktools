@@ -181,6 +181,8 @@ $ sudo make install
 ```
 
 ### Windows
+*Note for MinGW users*: ImageMagick 6.8.9 was reported to not compile under MinGW. Version 6.8.8-10 was confirmed to work. You may also need to install (and likely compile) libpng and zlib.
+
 Open CMake, select the ktools directory as the source folder ("Where is the source code") and whichever directory you'd like as the build folder ("Where to build the binaries"). Click "Configure" and select a generator (typically either a version of Visual Studio of "MinGW Makefiles"). Leave "Use default native compilers" checked and click "Finish". If you with to customize some compilation option (which shouldn't be necessary) do so now, in the options presented in red after the configure step finishes. If any option was changed, click "Configure" again. Finally, click "Generate", which should place the project files in the build directory you selected.
 
 For MinGW, proceed as in the Linux/Mac case (i.e., simply run `make` in the build directory).
