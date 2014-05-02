@@ -157,6 +157,16 @@ namespace KTools {
 		U second;
 	};
 
+
+	template<typename T>
+	class ptrLess : public std::binary_function<T*, T*, bool> {
+	public:
+		bool operator()(const T* a, const T* b) const {
+			return *a < *b;
+		}
+	};
+
+
 	static const class Nil { public: Nil() {} } nil;
 
 	template<typename T> class Maybe;

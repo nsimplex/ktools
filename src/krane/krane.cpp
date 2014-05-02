@@ -1,5 +1,6 @@
 #include "krane.hpp"
 #include "ktex/ktex.hpp"
+#include "image_operations.hpp"
 
 #include <clocale>
 
@@ -43,7 +44,9 @@ static Magick::Image load_image(const Compat::Path& path) {
 		KTEX::File ktex;
 		ktex.flipImage(false);
 		ktex.loadFrom(path, 0);
-		return ktex.Decompress();
+		Magick::Image img = ktex.Decompress();
+		ImOp::demultiplyAlpha()(img);
+		return img;
 	}
 	else {
 		return load_vanilla_image(path);

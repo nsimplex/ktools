@@ -120,6 +120,48 @@ namespace Krane {
 					return z;
 				}
 
+				int compare(const Element& elem) const {
+					//static const float_type z_eps = 1e-3;
+
+					if(hash < elem.hash) {
+						return -1;
+					}
+					else if(hash > elem.hash) {
+						return 1;
+					}
+
+					if(layername_hash < elem.layername_hash) {
+						return -1;
+					}
+					else if(layername_hash > elem.layername_hash) {
+						return 1;
+					}
+
+					/*
+					if(z + z_eps < elem.z) {
+						return -1;
+					}
+					else if(z > elem.z + z_eps) {
+						return 1;
+					}
+					*/
+
+					return 0;
+				}
+
+				bool operator<(const Element& elem) const {
+					return compare(elem) < 0;
+				}
+
+				bool operator==(const Element& elem) const {
+					return compare(elem) == 0;
+				}
+
+				template<typename U>
+				bool operator!=(const U& u) const {
+					return !(*this == u);
+				}
+
 			private:
 				std::istream& loadPre(std::istream& in, int verbosity);
 				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);

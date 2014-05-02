@@ -98,6 +98,7 @@ namespace Krane {
 		Image img = Image(geo, "transparent");
 		img.clipMask(mask);
 		MAGICK_WRAP(img.composite( quad, Geometry(0, 0), OverCompositeOp ));
+		img.clipMask(Image());
 
 
 		// This is to reverse the scaling down applied by the mod tools' scml compiler.

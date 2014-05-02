@@ -119,8 +119,8 @@ namespace {
 		uint32_t z_index;
 		computations_float_type last_sort_order;
 
-		AnimationFrameExporterState(uint32_t _animation_frame_id) : animation_frame_id(_animation_frame_id), object_ref_id(0), z_index(0) {
-			last_sort_order = numeric_limits<computations_float_type>::infinity();
+		AnimationFrameExporterState(uint32_t _animation_frame_id, int max_z_index) : animation_frame_id(_animation_frame_id), object_ref_id(0), z_index(max_z_index) {
+			last_sort_order = -numeric_limits<computations_float_type>::infinity();
 		}
 	};
 
@@ -189,7 +189,7 @@ namespace {
 		}
 
 	public:
-		AnimationSymbolMetadata(int _dupecnt) : timeline(), id(0), dupeness(_dupecnt), is_dupe(_dupecnt > 0) {}
+		AnimationSymbolMetadata(int _dupecnt = 0) : timeline(), id(0), dupeness(_dupecnt), is_dupe(_dupecnt > 0) {}
 
 		/*
 		 * If no timeline node has been created yet, creates one and sets its attributes.
@@ -211,12 +211,17 @@ namespace {
 			push_back( AnimationSymbolFrameMetadata(elem, start_time) );
 		}
 
-		void setDupe() {
+		void setDupe(int _dupeness) {
 			if(is_dupe) return;
+			dupeness = _dupeness;
 			is_dupe = true;
 			if(timeline) {
 				setDupedName();
 			}
+		}
+
+		void setDupe() {
+			setDupe(dupeness);
 		}
 
 		std::string getAnimationName() const {
@@ -258,8 +263,14 @@ namespace {
 	 * Each value is a list, where a new element is added when a new timeline is required
 	 * (due to an object appearing multiple times, such as machine_leg for the researchlab).
 	 */
-	class AnimationMetadata : public map<hash_t, list<AnimationSymbolMetadata> > {
+	class AnimationMetadata : public map<const KAnim::Frame::Element*, std::list<AnimationSymbolMetadata>, ptrLess<KAnim::Frame::Element> > {
 		xml_node animation;
+
+		// Counts how many times an element hash has been added.
+		std::multiset<hash_t> elemhash_mset;
+
+		// Maps an element hash to the first AnimationSymbolMetadata referring to it.
+		std::map<hash_t, AnimationSymbolMetadata*> first_comers;
 
 	public:
 		typedef value_type::second_type symbolmeta_list;
@@ -267,10 +278,10 @@ namespace {
 
 		AnimationMetadata(xml_node _animation) : animation(_animation) {}
 
-		AnimationSymbolMetadata& initializeChild(hash_t symbolHash, uint32_t& current_timeline_id, uint32_t start_time, const KAnim::Frame::Element& elem) {
-			symbolmeta_list& L = (*this)[symbolHash];
+		AnimationSymbolMetadata& initializeChild(uint32_t& current_timeline_id, uint32_t start_time, const KAnim::Frame::Element& elem) {
+			const int dupeness = int(elemhash_mset.count(elem.getHash()));
 
-			const int dupeness = int(L.size());
+			symbolmeta_list& L = (*this)[&elem];
 
 			for(symbolmeta_list::iterator it = L.begin(); it != L.end(); ++it) {
 				AnimationSymbolMetadata& animsymmeta = *it;
@@ -285,11 +296,20 @@ namespace {
 
 			L.push_back( AnimationSymbolMetadata(dupeness) );
 			AnimationSymbolMetadata& animsymmeta = L.back();
+
+			if(dupeness == 0) {
+				first_comers.insert( std::make_pair(elem.getHash(), &animsymmeta) );
+			}
+			else if(dupeness == 1) {
+				AnimationSymbolMetadata* first_animsymmeta = first_comers[elem.getHash()];
+				if(first_animsymmeta == NULL) {
+					throw std::logic_error("first_comers mapped to NULL, but elemhash_mset has a count greater than 0.");
+				}
+				first_animsymmeta->setDupe();
+			}
 			animsymmeta.initialize(animation, current_timeline_id, start_time, elem);
 
-			if(dupeness > 0) {
-				L.front().setDupe();
-			}
+			elemhash_mset.insert(elem.getHash());
 
 			return animsymmeta;
 		}
@@ -466,10 +486,10 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 	}
 
 	for(AnimationMetadata::const_iterator animsymlistit = animmeta.begin(); animsymlistit != animmeta.end(); ++animsymlistit) {
-		BuildMetadata::const_iterator symmeta_match = bmeta.find(animsymlistit->first);
+		BuildMetadata::const_iterator symmeta_match = bmeta.find(animsymlistit->first->getHash());
 
 		if(symmeta_match == bmeta.end()) {
-			throw logic_error("Program logic state invariant breached: keys of AnimationMetadata are not a subset of keys of BuildMetadata.");
+			throw logic_error("Program logic state invariant breached: hashes of keys of AnimationMetadata are not a subset of keys of BuildMetadata.");
 		}
 
 		const AnimationMetadata::list_type& animsymlist = animsymlistit->second;
@@ -479,7 +499,6 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 		}
 	}
 }
-
 static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, AnimationMetadata& animmeta, const BuildMetadata& bmeta, const KAnim::Frame& frame) {
 	const uint32_t key_id = s.key_id++;
 	const computations_float_type running_length = s.running_length;
@@ -492,9 +511,9 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 	//cout << "Exporting animation frame " << key_id << endl;
 
-	AnimationFrameExporterState local_s(key_id);
+	AnimationFrameExporterState local_s(key_id, int(frame.elements.size()));
 
-	for(KAnim::Frame::elementlist_t::const_reverse_iterator elemit = frame.elements.rbegin(); elemit != frame.elements.rend(); ++elemit) {
+	for(KAnim::Frame::elementlist_t::const_iterator elemit = frame.elements.begin(); elemit != frame.elements.end(); ++elemit) {
 		const KAnim::Frame::Element& elem = *elemit;
 
 		BuildMetadata::const_iterator symmeta_match = bmeta.find(elem.getHash());
@@ -504,7 +523,7 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 		const BuildSymbolMetadata& symmeta = symmeta_match->second;
 
-		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(elem.getHash(), s.timeline_id, start_time, elem);
+		AnimationSymbolMetadata& animsymmeta = animmeta.initializeChild(s.timeline_id, start_time, elem);
 
 		exportAnimationFrameElement(mainline_key, local_s, animsymmeta, symmeta, elem);
 	}
@@ -512,7 +531,7 @@ static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, A
 
 static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExporterState& s, AnimationSymbolMetadata& animsymmeta, const BuildSymbolMetadata& symmeta, const KAnim::Frame::Element& elem) {
 	const uint32_t object_ref_id = s.object_ref_id++;
-	const uint32_t z_index = s.z_index++;
+	const uint32_t z_index = s.z_index--;
 
 	const uint32_t build_frame = elem.getBuildFrame();
 
@@ -524,7 +543,7 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 	// Sanity checking.
 	{
 		computations_float_type sort_order = elem.getAnimSortOrder();
-		if(sort_order > s.last_sort_order) {
+		if(sort_order < s.last_sort_order) {
 			throw logic_error("Program logic state invariant breached: anim sort order progression is not monotone.");
 		}
 		s.last_sort_order = sort_order;
@@ -613,17 +632,24 @@ static SquareMatrix<2, computations_float_type> scaleMatrix(computations_float_t
  *
  * In Spriter, scaling is applied before rotation.
  *
- * Since the decomposition is not unique, the x scale is imposed to always be non-negative.
+ * To impose uniqueness, scale_x never changes sign.
  *
  * The result is stored in ret, and last holds the last batch of results
  * (the ones relevant for further computation, anyway)
  */
 template<typename MatrixType>
-static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_components& last) {
-	ret.angle = atan2(M[1][0], M[1][1]);
+static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_components& last, bool& is_first) {
 	ret.scale_x = sqrt(M[0][0]*M[0][0] + M[1][0]*M[1][0]);
 	ret.scale_y = sqrt(M[0][1]*M[0][1] + M[1][1]*M[1][1]);
 
+	/*
+	// Angle according to the scale_x entries.
+	const computations_float_type angle_x = atan2(M[1][0], M[0][0]);
+	// Angle according to the scale_y entries.
+	const computations_float_type angle_y = atan2(-M[0][1], M[1][1]);
+	*/
+
+	ret.angle = atan2(M[1][0]/ret.scale_x, M[1][1]/ret.scale_y);
 
 	ret.spin = (fabs(ret.angle - last.angle) <= M_PI ? 1 : -1);
 	if(ret.angle < last.angle) {
@@ -631,28 +657,44 @@ static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_
 	}
 
 
-	last.angle = ret.angle;
-
-	
-	if(fabs(M[1][1]) < 0.001) {
+	if(fabs(M[1][1]) < 1e-3) {
 		if(last.scale_y < 0) {
-			ret.scale_y = -ret.scale_y;
-		}
-		return;
-	}
-
-	if(M[1][1] < 0) {
-		if(fabs(ret.angle) < M_PI/2) {
 			ret.scale_y = -ret.scale_y;
 		}
 	}
 	else {
-		if(fabs(ret.angle) > M_PI/2) {
-			ret.scale_y = -ret.scale_y;
+		if(M[1][1] < 0) {
+			if(fabs(ret.angle) < M_PI/2) {
+				ret.scale_y = -ret.scale_y;
+			}
+		}
+		else {
+			if(fabs(ret.angle) > M_PI/2) {
+				ret.scale_y = -ret.scale_y;
+			}
 		}
 	}
 
+	if(is_first) {
+		if(ret.angle > 0) {
+			if(M[0][1]*ret.scale_y > 0) {
+				ret.scale_x = -ret.scale_x;
+			}
+		}
+		else if(M[0][1]*ret.scale_y < 0) {
+			ret.scale_x = -ret.scale_x;
+		}
+		is_first = false;
+	}
+	else {
+		if(last.scale_x < 0) {
+			ret.scale_x = -ret.scale_x;
+		}
+	}
+
+	last.scale_x = ret.scale_x;
 	last.scale_y = ret.scale_y;
+	last.angle = ret.angle;
 }
 
 /*
@@ -677,6 +719,8 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	 */
 	matrix_components last_result;
 
+	bool is_first = true;
+
 	/*
 	 * Stores the maximum square "badness" of the symbol, over all its frames.
 	 *
@@ -700,7 +744,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		M.getTranslation(trans);
 
 		matrix_components geo;
-		decomposeMatrix(M, geo, last_result);
+		decomposeMatrix(M, geo, last_result, is_first);
 
 		if(options::check_animation_fidelity) {
 			computations_float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));

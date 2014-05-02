@@ -245,6 +245,21 @@ namespace Krane {
 			it->loadPost(in, ht, verbosity);
 		}
 
+		/*
+		if(1) {
+			typedef std::set< std::pair<hash_t, float_type> > myset_t;
+			std::map<hash_t, myset_t > elem_layer_set;
+			for(elementlist_t::iterator it = elements.begin(); it != elements.end(); ++it) {
+				myset_t& myset = elem_layer_set[it->getHash()];
+				myset_t::value_type val = std::make_pair( it->layername_hash, it->z );
+				if(myset.count(val)) {
+					std::cerr << ("Same element with duplicate layers: " + it->getName() + ", " + it->layername) << std::endl;
+				}
+				myset.insert(val);
+			}
+		}
+		*/
+
 		return in;
 	}
 
