@@ -1,6 +1,8 @@
 #ifndef KTOOLS_CONFIG_H
 #define KTOOLS_CONFIG_H
 
+#cmakedefine HAVE_LIBZIP
+
 /* define if the library defines strstream */
 #cmakedefine HAVE_CLASS_STRSTREAM
 

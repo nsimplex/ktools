@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8.8)
 Project(ktools CXX)
 
 set(PACKAGE_VERSION_MAJOR 4)
-set(PACKAGE_VERSION_MINOR 1)
+set(PACKAGE_VERSION_MINOR 2)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
 
 OPTION(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
@@ -22,6 +22,9 @@ set( ktech_LIBS "" )
 set( krane_LIBS "pugixml" )
 
 
+list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" )
+list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/thirdparty" )
+
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
 include(CheckIncludeFileCXX)
@@ -30,11 +33,11 @@ include(CheckFunctionExists)
 include(CheckTypeSize)
 include(CheckStructHasMember)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/LibFindMacros.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/integer_types.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/warnings.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_specific.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/OptimizeForArchitecture.cmake)
+include(LibFindMacros)
+include(integer_types)
+include(warnings)
+include(compiler_specific)
+include(OptimizeForArchitecture)
 
 
 set(CMAKE_BUILD_TYPE Release)
@@ -74,6 +77,21 @@ foreach(f ${Magick++_PKGCONF_LDFLAGS})
 endforeach()
 list( APPEND COMMON_INCLUDE_DIRS "${ImageMagick_INCLUDE_DIRS}" )
 list( APPEND COMMON_LIBS "${ImageMagick_LIBRARIES}" )
+
+
+FIND_PACKAGE(LibZip)
+if(LIBZIP_FOUND)
+	list( APPEND COMMON_INCLUDE_DIRS "${LIBZIP_INCLUDE_DIR}" )
+	list( APPEND COMMON_LIBS "${LIBZIP_LIBRARY}" )
+
+	set(HAVE_LIBZIP 1)
+
+	FIND_PACKAGE(ZLIB)
+	if(ZLIB_FOUND)
+		#list( APPEND COMMON_INCLUDE_DIRS "${ZLIB_INCLUDE_DIR}" )
+		list( APPEND COMMON_LIBS "${ZLIB_LIBRARY}" )
+	endif(ZLIB_FOUND)
+endif(LIBZIP_FOUND)
 
 
 CHECK_LIBRARY_EXISTS(m floor "" HAVE_MATH_LIB) 

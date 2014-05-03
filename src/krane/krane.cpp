@@ -7,11 +7,12 @@
 using namespace Krane;
 using namespace std;
 
-typedef std::list<KTools::VirtualPath> pathlist_t;
+typedef KTools::VirtualPath path_t;
+typedef std::list<path_t> pathlist_t;
 
 static Magick::Image load_vanilla_image(const Compat::Path& path) {
 	if(options::verbosity >= 0) {
-		cout << "Loading image from " << path << "..." << endl;
+		cout << "Loading atlas from " << path << "..." << endl;
 	}
 	Magick::Image img;
 	try {
@@ -27,7 +28,7 @@ static Magick::Image load_vanilla_image(const Compat::Path& path) {
 	return img;
 }
 
-static Magick::Image load_image(const Compat::Path& path) {
+static Magick::Image load_image(const path_t& path) {
 	if(!path.exists() && path.hasExtension("tex"))
 	{
 		Compat::Path newpath = path;
@@ -43,7 +44,21 @@ static Magick::Image load_image(const Compat::Path& path) {
 	if(path.hasExtension("tex")) {
 		KTEX::File ktex;
 		ktex.flipImage(false);
-		ktex.loadFrom(path, 0);
+
+		if(options::verbosity >= 0) {
+			cout << "Loading atlas from `" << path << "'..." << endl;
+		}
+		std::istream* in = path.openIn(std::ifstream::binary);
+		try {
+			ktex.load(*in, 0);
+		}
+		catch(...) {
+			delete in;
+			in = NULL;
+			throw;
+		}
+		delete in;
+
 		Magick::Image img = ktex.Decompress();
 		ImOp::demultiplyAlpha()(img);
 		return img;
@@ -55,7 +70,6 @@ static Magick::Image load_image(const Compat::Path& path) {
 
 static void preprocess_input_list(pathlist_t& inputs) {
 	typedef pathlist_t::iterator iter_t;
-	typedef pathlist_t::value_type path_t;
 
 	for(iter_t it = inputs.begin(); it != inputs.end();) {
 		if(!it->exists()) {
@@ -64,7 +78,7 @@ static void preprocess_input_list(pathlist_t& inputs) {
 			continue;
 		}
 
-		if(it->isDirectory()) {
+		if(it->isDirectory() || it->isZipArchive()) {
 			path_t build = (*it)/"build.bin";
 			path_t anim = (*it)/"anim.bin";
 
@@ -78,7 +92,9 @@ static void preprocess_input_list(pathlist_t& inputs) {
 			inputs.erase(it++);
 		}
 		else if(it->hasExtension("tex")) {
-			cerr << "Skipping TEX file `" << *it << "'..." << endl;
+			if(options::verbosity >= 0) {
+				cerr << "Skipping TEX file `" << *it << "'..." << endl;
+			}
 			inputs.erase(it++);
 		}
 		else {
@@ -146,7 +162,6 @@ static void load_anims(std::istream& in, KAnimBankCollection& banks) {
 
 static KBuild* process_input_list(const pathlist_t& inputs, KAnimBankCollection& banks) {
 	typedef pathlist_t::const_iterator iter_t;
-	typedef pathlist_t::value_type path_t;
 
 	KBuild* bild = NULL;
 
