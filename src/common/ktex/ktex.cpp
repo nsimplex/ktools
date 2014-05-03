@@ -23,18 +23,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace KTools;
 using namespace KTools::KTEX;
 
-bool KTools::KTEX::File::isKTEXFile(const std::string& path) {
-	uint32_t magic;
-
-	std::ifstream file(path.c_str(), std::ifstream::in | std::ifstream::binary);
-	if(!check_stream_validity(file, "", false))
+bool KTools::KTEX::File::isKTEXFile(std::istream& in) {
+	try {
+		return BinIOHelper::getMagicNumber(in) == HeaderSpecs::MAGIC_NUMBER;
+	}
+	catch(...) {
 		return false;
+	}
+}
 
-	file.imbue(std::locale::classic());
-
-	BinIOHelper::raw_read_integer(file, magic);
-
-	return file && magic == HeaderSpecs::MAGIC_NUMBER;
+bool KTools::KTEX::File::isKTEXFile(const std::string& path) {
+	try {
+		return BinIOHelper::getMagicNumber(path) == HeaderSpecs::MAGIC_NUMBER;
+	}
+	catch(...) {
+		return false;
+	}
 }
 
 void KTools::KTEX::File::dumpTo(const std::string& path, int verbosity) {

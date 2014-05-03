@@ -49,7 +49,7 @@ namespace KTools {
 
 		bool isZipArchive() const {
 #if defined(HAVE_LIBZIP)
-			return hasExtension("zip");
+			return hasExtension("zip") && super::exists();
 #else
 			return false;
 #endif

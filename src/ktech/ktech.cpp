@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ktech.hpp"
 #include "image_operations.hpp"
+#include "file_abstraction.hpp"
 
 
 // For non-KTEX.
@@ -28,6 +29,8 @@ using namespace KTech;
 using namespace Compat;
 using namespace std;
 
+
+typedef VirtualPath path_t;
 
 
 template<typename IntegerType>
@@ -205,15 +208,18 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	tex.dumpTo(output_path, verbosity);
 }
 
-static void convert_from_KTEX(const string& input_path, const string& output_path) {
+static void convert_from_KTEX(std::istream& in, const string& input_path, const string& output_path) {
 	const int verbosity = options::verbosity;
 	int load_verbosity = verbosity;
 	if(options::info) {
 		load_verbosity = -1;
 	}
 
+	if(load_verbosity >= 0) {
+		std::cout << "Loading KTEX from `" << input_path << "'..." << std::endl;
+	}
 	KTech::KTEX::File tex;
-	tex.loadFrom(input_path, load_verbosity, options::info);
+	tex.load(in, load_verbosity, options::info);
 
 	if(options::info) {
 		std::cout << "File: " << input_path << endl;
@@ -307,11 +313,18 @@ int main(int argc, char* argv[]) {
 		string input_path_str, output_path_str;
 		KTEX::File::Header configured_header = parse_commandline_options(argc, argv, input_path_str, output_path_str);
 
-		list< Path > input_paths;
+		typedef list<path_t> pathlist_t;
+		pathlist_t input_paths;
 		split( std::back_inserter(input_paths), input_path_str, ",");
 		if(input_paths.empty()) {
 			cerr << "error: Empty list of input files provided." << endl;
 			exit(1);
+		}
+
+		for(pathlist_t::iterator it = input_paths.begin(); it != input_paths.end(); ++it) {
+			if(it->isDirectory() || it->isZipArchive()) {
+				*it /= "atlas-0.tex";
+			}
 		}
 
 		Path output_path = output_path_str;
@@ -320,7 +333,9 @@ int main(int argc, char* argv[]) {
 
 		//assert( input_path != "-" );
 
-		if(KTech::KTEX::File::isKTEXFile(input_paths.front())) {
+
+		std::istream* in = input_paths.front().openIn(std::ifstream::binary);
+		if(KTech::KTEX::File::isKTEXFile(*in)) {
 			if(input_paths.size() > 1) {
 				throw Error("Multiple input files should only be given on TEX output.");
 			}
@@ -329,9 +344,12 @@ int main(int argc, char* argv[]) {
 				output_path += DEFAULT_OUTPUT_EXTENSION;
 			}
 
-			convert_from_KTEX(input_paths.front(), output_path);
+			convert_from_KTEX(*in, input_paths.front(), output_path);
+			delete in;
 		}
 		else {
+			delete in;
+
 			if(!output_has_extension) {
 				output_path += ".tex";
 			}

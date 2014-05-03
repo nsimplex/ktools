@@ -189,6 +189,8 @@ namespace KTools {
 			bool flip_image;
 
 		public:
+			static bool isKTEXFile(std::istream& in);
+
 			static bool isKTEXFile(const std::string& path);
 
 			void flipImage(bool b) {
