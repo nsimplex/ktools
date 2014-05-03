@@ -485,6 +485,12 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 		exportAnimationFrame(mainline, local_s, animmeta, bmeta, frame);
 	}
 
+	// Put an end frame.
+	if(!A.frames.empty()) {
+		const KAnim::Frame& frame = A.frames.back();
+		exportAnimationFrame(mainline, local_s, animmeta, bmeta, frame);
+	}
+
 	for(AnimationMetadata::const_iterator animsymlistit = animmeta.begin(); animsymlistit != animmeta.end(); ++animsymlistit) {
 		BuildMetadata::const_iterator symmeta_match = bmeta.find(animsymlistit->first->getHash());
 
@@ -595,10 +601,10 @@ template<typename MatrixTypeA, typename MatrixTypeB>
 static typename MatrixTypeA::value_type matrix_distsq(const MatrixTypeA& A, const MatrixTypeB& B) {
 	typedef typename MatrixTypeA::value_type f_t;
 
-	f_t a = A[0][0] - B[0][0];
-	f_t b = A[0][1] - B[0][1];
-	f_t c = A[1][0] - B[1][0];
-	f_t d = A[1][1] - B[1][1];
+	const f_t a = A[0][0] - B[0][0];
+	const f_t b = A[0][1] - B[0][1];
+	const f_t c = A[1][0] - B[1][0];
+	const f_t d = A[1][1] - B[1][1];
 
 	return a*a + b*b + c*c + d*d;
 }
@@ -746,6 +752,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		matrix_components geo;
 		decomposeMatrix(M, geo, last_result, is_first);
 
+
 		if(options::check_animation_fidelity) {
 			computations_float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
 			if(mdsq > MATRIX_EPS && (symbol_sqbadness == nil || symbol_sqbadness.value() < mdsq)) {
@@ -753,10 +760,12 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 			}
 		}
 
-		if(geo.angle < 0) {
-			geo.angle += 2*M_PI;
+
+		computations_float_type angle = geo.angle;
+		if(angle < 0) {
+			angle += 2*M_PI;
 		}
-		geo.angle *= 180.0/M_PI;
+		angle *= 180.0/M_PI;
 
 
 		timeline_key.append_attribute("spin") = geo.spin;
@@ -770,7 +779,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		object.append_attribute("y") = -trans[1];
 		object.append_attribute("scale_x") = geo.scale_x;
 		object.append_attribute("scale_y") = geo.scale_y;
-		object.append_attribute("angle") = geo.angle;
+		object.append_attribute("angle") = angle;
 	}
 
 	if(symbol_sqbadness != nil) {
