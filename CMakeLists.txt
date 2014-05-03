@@ -215,14 +215,14 @@ set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES
 "~$"
 "/[.].+$"
-"/local/"
-"/deps/"
-"/build/"
+"^${CMAKE_CURRENT_SOURCE_DIR}/local/"
+"^${CMAKE_CURRENT_SOURCE_DIR}/deps/"
+"^${CMAKE_CURRENT_SOURCE_DIR}/build/"
+"^${CMAKE_CURRENT_SOURCE_DIR}/config.h$"
 "/cmake_install.cmake$"
-".*/cmake_install.cmake$"
 "/CMakeFiles/"
 "/Makefile$"
-"${CMAKE_BINARY_DIR}/.*"
+"^${CMAKE_BINARY_DIR}/.*"
 )
 include(CPack)
 
