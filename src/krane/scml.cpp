@@ -466,7 +466,6 @@ static void exportAnimationBank(xml_node spriter_data, AnimationBankCollectionEx
 
 static void exportAnimation(xml_node entity, AnimationBankExporterState& s, const BuildMetadata& bmeta, const KAnim& A) {
 	const uint32_t animation_id = s.animation_id++;
-	const computations_float_type frame_duration = A.getFrameDuration();
 
 	//cout << "Exporting animation: " << A.getName() << endl;
 
@@ -475,7 +474,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 
 	animation.append_attribute("id") = animation_id;
 	animation.append_attribute("name") = A.getFullName().c_str(); // BUILD_PLAYER ?
-	animation.append_attribute("length") = tomilli(A.getDuration() - frame_duration); // keep the subtraction?
+	animation.append_attribute("length") = tomilli(A.getDuration()); // keep the subtraction?
 
 	xml_node mainline = animation.append_child("mainline");
 
