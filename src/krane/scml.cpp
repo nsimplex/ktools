@@ -474,7 +474,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 
 	animation.append_attribute("id") = animation_id;
 	animation.append_attribute("name") = A.getFullName().c_str(); // BUILD_PLAYER ?
-	animation.append_attribute("length") = tomilli(A.getDuration()); // keep the subtraction?
+	animation.append_attribute("length") = tomilli(A.getDuration());
 
 	xml_node mainline = animation.append_child("mainline");
 

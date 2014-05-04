@@ -179,14 +179,16 @@ namespace KTools {
 		friend Maybe<T> Just<T>(T);
 
 		bool is_nothing;
-		T val;
+		T v;
 
-		Maybe(T _val) : is_nothing(false), val(_val) {}
+		Maybe(T _v) : is_nothing(false), v(_v) {}
 
 	public:
+		typedef T vue_type;
+
 		Maybe& operator=(const Maybe& m) {
 			is_nothing = m.is_nothing;
-			val = m.val;
+			v = m.v;
 			return *this;
 		}
 
@@ -195,8 +197,8 @@ namespace KTools {
 			return *this;
 		}
 
-		Maybe() : is_nothing(true), val() {}
-		Maybe(Nil) : is_nothing(true), val() {}
+		Maybe() : is_nothing(true), v() {}
+		Maybe(Nil) : is_nothing(true), v() {}
 		Maybe(const Maybe& m) { *this = m; }
 
 		bool operator==(Nil) const {
@@ -208,7 +210,17 @@ namespace KTools {
 		}
 
 		bool operator==(const Maybe& m) const {
-			return (is_nothing && m.is_nothing) || (!is_nothing && !m.is_nothing && val == m.val);
+			return (is_nothing && m.is_nothing) || (!is_nothing && !m.is_nothing && v == m.v);
+		}
+
+		template<typename U>
+		bool operator==(const U& u) const {
+			return !is_nothing && v == u;
+		}
+
+		template<typename U>
+		friend bool operator==(const U& u, const Maybe& m) {
+			return m == u;
 		}
 
 		template<typename U>
@@ -221,11 +233,36 @@ namespace KTools {
 			return !(*this == u);
 		}
 
-		T value() const {
+		template<typename U>
+		U to() {
 			if(is_nothing) {
 				throw Error("Attempt to cast nil to a value.");
 			}
-			return val;
+			return static_cast<U>(v);
+		}
+
+		template<typename U>
+		U to() const {
+			if(is_nothing) {
+				throw Error("Attempt to cast nil to a value.");
+			}
+			return static_cast<U>(v);
+		}
+
+		T value() const {
+			return to<T>();
+		}
+
+		T val() const {
+			return to<T>();
+		}
+
+		T& ref() {
+			return to<T&>();
+		}
+
+		const T& ref() const {
+			return to<const T&>();
 		}
 
 		operator T() const {
