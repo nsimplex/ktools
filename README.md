@@ -170,6 +170,8 @@ not be given as arguments.
 ## INSTALLATION FROM SOURCE
 First, install [CMake](http://www.cmake.org), [ImageMagick](http://www.imagemagick.org) and a native building solution (such as Visual Studio for Windows, XCode for Mac and gcc/GNU Make for Linux; in the Linux case, you probably have them already).
 
+The library libzip is an optional dependency. If it is present and found at compilation time, zip archives are treated in the same manner as directories when given as input.
+
 ### Linux anc Mac
 Enter ktools' directory with a terminal and type
 ```
