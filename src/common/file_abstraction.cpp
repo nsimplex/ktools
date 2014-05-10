@@ -55,7 +55,7 @@ namespace KTools {
 		Compat::Path zippath = substr(0, ssize_t(entry_pathpos) - 1);
 		Compat::UnixPath entrypath = substr(entry_pathpos);
 
-		cout << "exist check: " << entrypath << endl;
+		//cout << "exist check: " << entrypath << endl;
 
 		struct zip * z = zip_open(zippath.c_str(), 0, NULL);
 		if(z == NULL) {

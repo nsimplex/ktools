@@ -372,7 +372,7 @@ namespace Compat {
 			return p.isNewerThan(*this);
 		}
 
-		bool mkdir(mode_t mode = 0777, bool fail_on_existence = false) const {
+		bool mkdir(mode_t mode = 0775, bool fail_on_existence = false) const {
 			int status;
 #if defined(IS_WINDOWS)
 			status = ::_mkdir(c_str());

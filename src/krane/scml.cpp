@@ -26,7 +26,7 @@ template<typename T>
 static inline T normalize_time(T t) CONSTFUNCTION;
 template<typename T>
 inline T normalize_time(T t) {
-	return TIME_SCALE*t;
+	return T(TIME_SCALE)*t;
 }
 
 static inline int tomilli(float x) CONSTFUNCTION;
