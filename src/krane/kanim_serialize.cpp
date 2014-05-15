@@ -63,11 +63,12 @@ namespace Krane {
 	};
 
 	class FallbackKAnimNamer : public KAnimNamer {
+		mutable DataFormatter fmt;
+
+		/*
 		mutable hashtable_t eventcache;
 		mutable hashtable_t elementcache;
 		mutable hashtable_t layercache;
-
-		mutable DataFormatter fmt;
 
 		std::string resolveHash(hash_t h, hashtable_t& cache, const char* prefix) const {
 			std::string* ret;
@@ -84,22 +85,27 @@ namespace Krane {
 			}
 			return *ret;
 		}
+		*/
+
+		std::string resolveHash(hash_t h, const char *prefix) const {
+			unsigned long id = (unsigned long)h;
+			return fmt("%s%02lx", prefix, id);
+		}
 
 	public:
 		FallbackKAnimNamer() {}
 
 		virtual std::string getBankName(hash_t h) const {
-			unsigned long id = (unsigned long)h;
-			return fmt("bank_%lx", id);
+			return resolveHash(h, "bank_");
 		}
 		virtual std::string getEventName(hash_t h) const {
-			return resolveHash(h, eventcache, "event_");
+			return resolveHash(h, "event_");
 		}
 		virtual std::string getElementName(hash_t h) const {
-			return resolveHash(h, elementcache, "element_");
+			return resolveHash(h, "element_");
 		}
 		virtual std::string getLayerName(hash_t h) const {
-			return resolveHash(h, layercache, "layer_");
+			return resolveHash(h, "layer_");
 		}
 	};
 

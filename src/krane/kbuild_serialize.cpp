@@ -143,11 +143,11 @@ namespace Krane {
 
 			DataFormatter fmt;
 
-			unsigned long symb_counter = 0;
 			for(symbol_iter it = symbols.begin(); it != symbols.end(); ++it) {
+				unsigned long id = (unsigned long)it->first;
 				Symbol& symb = it->second;
 
-				symb.name = fmt("symbol%02lu", ++symb_counter);
+				symb.name = fmt("symbol_%lx", id);
 			}
 		}
 		else {
