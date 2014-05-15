@@ -28,6 +28,9 @@ namespace Krane {
 
 	class KAnim;
 
+	// Resolves hashes to names.
+	class KAnimNamer;
+
 	template<template<typename T, typename A> class Container = std::deque, typename Alloc = std::allocator<KAnim*> >
 	class KAnimFile;
 
@@ -68,12 +71,6 @@ namespace Krane {
 				const std::string& getName() const {
 					return name;
 				}
-
-			private:
-				/*
-				std::istream& loadPre(std::istream& in, int verbosity);
-				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
-				*/
 			};
 
 			class Element : public NestedSerializer<Frame> {
@@ -164,7 +161,7 @@ namespace Krane {
 
 			private:
 				std::istream& loadPre(std::istream& in, int verbosity);
-				std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
+				std::istream& loadPost(std::istream& in, const KAnimNamer& ht, int verbosity);
 			};
 
 			typedef std::map<hash_t, Event> eventmap_t;
@@ -189,7 +186,7 @@ namespace Krane {
 
 		private:
 			std::istream& loadPre(std::istream& in, int verbosity);
-			std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
+			std::istream& loadPost(std::istream& in, const KAnimNamer& ht, int verbosity);
 		};
 
 	private:
@@ -277,7 +274,7 @@ namespace Krane {
 
 	private:
 		std::istream& loadPre(std::istream& in, int verbosity);
-		std::istream& loadPost(std::istream& in, const hashtable_t& ht, int verbosity);
+		std::istream& loadPost(std::istream& in, const KAnimNamer& ht, int verbosity);
 	};
 
 
@@ -300,9 +297,13 @@ namespace Krane {
 			return name;
 		}
 
-		void setName(const std::string& _name) {
+		void setName(hash_t _h, const std::string& _name) {
+			hash = _h;
 			name = _name;
-			hash = strhash(_name);
+		}
+
+		void setName(const std::string& _name) {
+			setName(strhash(_name), _name);
 		}
 
 		void addAnim(KAnim* A) {
@@ -349,6 +350,8 @@ namespace Krane {
 		int32_t version;
 
 	public:
+		bool shouldHaveHashTable() const;
+
 		static bool checkVersion(int32_t v) {
 			return MIN_VERSION <= v && v <= MAX_VERSION;
 		}
@@ -374,7 +377,7 @@ namespace Krane {
 		std::istream& load(std::istream& in, int verbosity);
 
 		virtual std::istream& loadPre_all_anims(std::istream& in, int verbosity) = 0;
-		virtual std::istream& loadPost_all_anims(std::istream& in, const hashtable_t& ht, int verbosity) = 0;
+		virtual std::istream& loadPost_all_anims(std::istream& in, const KAnimNamer& ht, int verbosity) = 0;
 
 		virtual ~GenericKAnimFile() {}
 	};
@@ -429,7 +432,7 @@ namespace Krane {
 			return in;
 		}
 
-		virtual std::istream& loadPost_all_anims(std::istream& in, const hashtable_t& ht, int verbosity) {
+		virtual std::istream& loadPost_all_anims(std::istream& in, const KAnimNamer& ht, int verbosity) {
 			for(anim_iterator it = anims.begin(); it != anims.end(); ++it) {
 				if(!(*it)->loadPost(in, ht, verbosity)) {
 					throw(KToolsError("Failed to load animation."));
@@ -635,7 +638,7 @@ namespace Krane {
 			iterator match = find(A->getBankHash());
 			if(match == end()) {
 				B = new KAnimBank;
-				B->setName( A->getBank() );
+				B->setName( A->getBankHash(), A->getBank() );
 				insert( std::make_pair(A->getBankHash(), B) );
 			}
 			else {

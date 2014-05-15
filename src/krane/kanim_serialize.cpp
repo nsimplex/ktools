@@ -5,8 +5,103 @@ using namespace std;
 namespace Krane {
 	const uint32_t GenericKAnimFile::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("ANIM");
 
-	const int32_t GenericKAnimFile::MIN_VERSION = 4;
+	const int32_t GenericKAnimFile::MIN_VERSION = 3;
 	const int32_t GenericKAnimFile::MAX_VERSION = 4;
+
+
+	bool GenericKAnimFile::shouldHaveHashTable() const {
+		return version >= 4;
+	}
+
+
+	class KAnimNamer {
+	protected:
+		KAnimNamer() {}
+		KAnimNamer(const KAnimNamer&) {}
+		virtual ~KAnimNamer() {}
+
+	public:
+		virtual std::string getBankName(hash_t) const = 0;
+		virtual std::string getEventName(hash_t) const = 0;
+		virtual std::string getElementName(hash_t) const = 0;
+		virtual std::string getLayerName(hash_t) const = 0;
+	};
+
+	class HashTableKAnimNamer : public KAnimNamer {
+		hashtable_t* ht;
+
+		std::string doFail(const char *msg) const {
+			throw KToolsError(msg);
+			return "";
+		}
+
+		std::string resolveHash(hash_t h, const char *failmsg) const {
+			hashtable_t::const_iterator match = ht->find(h);
+			if(match == ht->end()) {
+				return doFail(failmsg);
+			}
+			else {
+				return match->second;
+			}
+		}
+
+	public:
+		HashTableKAnimNamer(hashtable_t& _ht) : ht(&_ht) {}
+
+		virtual std::string getBankName(hash_t h) const {
+			return resolveHash(h, "Incomplete anim hash table (missing bank name).");
+		}
+		virtual std::string getEventName(hash_t h) const {
+			return resolveHash(h, "Incomplete anim hash table (missing event name).");
+		}
+		virtual std::string getElementName(hash_t h) const {
+			return resolveHash(h, "Incomplete anim hash table (missing element name).");
+		}
+		virtual std::string getLayerName(hash_t h) const {
+			return resolveHash(h, "Incomplete anim hash table (missing layer name).");
+		}
+	};
+
+	class FallbackKAnimNamer : public KAnimNamer {
+		mutable hashtable_t eventcache;
+		mutable hashtable_t elementcache;
+		mutable hashtable_t layercache;
+
+		mutable DataFormatter fmt;
+
+		std::string resolveHash(hash_t h, hashtable_t& cache, const char* prefix) const {
+			std::string* ret;
+
+			hashtable_t::iterator match = cache.find(h);
+			if(match == cache.end()) {
+				unsigned long id = (unsigned long)cache.size() + 1;
+				std::string& cached_res = cache[h];
+				cached_res.assign(fmt("%s%02lu", prefix, id));
+				ret = &cached_res;
+			}
+			else {
+				ret = &(match->second);
+			}
+			return *ret;
+		}
+
+	public:
+		FallbackKAnimNamer() {}
+
+		virtual std::string getBankName(hash_t h) const {
+			unsigned long id = (unsigned long)h;
+			return fmt("bank_%lx", id);
+		}
+		virtual std::string getEventName(hash_t h) const {
+			return resolveHash(h, eventcache, "event_");
+		}
+		virtual std::string getElementName(hash_t h) const {
+			return resolveHash(h, elementcache, "element_");
+		}
+		virtual std::string getLayerName(hash_t h) const {
+			return resolveHash(h, layercache, "layer_");
+		}
+	};
 
 
 	void GenericKAnimFile::loadFrom(const string& path, int verbosity) {
@@ -80,28 +175,39 @@ namespace Krane {
 			throw(KToolsError("Corrupt anim file (invalid event count)."));
 		}
 
-		if(verbosity >= 1) {
-			cout << "Loading anim hash table..." << endl;
-		}
 
-		uint32_t htsize;
-		hashtable_t ht;
-		io.read_integer(in, htsize);
-		for(uint32_t i = 0; i < htsize; i++) {
-			hash_t h;
-			io.read_integer(in, h);
-
-			string& str = ht[h];
-			io.read_len_string<uint32_t>(in, str);
-
-			if(verbosity >= 5) {
-				cout << "\tGot 0x" << hex << h << dec << " => \"" << str << "\"" << endl;
+		if(!shouldHaveHashTable() || !in || in.peek() == EOF) {
+			if(shouldHaveHashTable()) {
+				std::cerr << "WARNING: Missing hash table at the end of the anim file. Generating automatic names." << std::endl;
 			}
+
+			FallbackKAnimNamer namer;
+
+			(void)loadPost_all_anims(in, namer, verbosity);
 		}
+		else {
+			if(verbosity >= 1) {
+				cout << "Loading anim hash table..." << endl;
+			}
 
+			hashtable_t ht;
+			uint32_t htsize;
+			io.read_integer(in, htsize);
+			for(uint32_t i = 0; i < htsize; i++) {
+				hash_t h;
+				io.read_integer(in, h);
 
-		if(!loadPost_all_anims(in, ht, verbosity)) {
-			throw(KToolsError("Failed to post-process animations."));
+				string& str = ht[h];
+				io.read_len_string<uint32_t>(in, str);
+
+				if(verbosity >= 5) {
+					cout << "\tGot 0x" << hex << h << dec << " => \"" << str << "\"" << endl;
+				}
+			}
+
+			HashTableKAnimNamer namer(ht);
+
+			(void)loadPost_all_anims(in, namer, verbosity);
 		}
 
 
@@ -147,19 +253,16 @@ namespace Krane {
 		return in;
 	}
 
-	istream& KAnim::loadPost(istream& in, const hashtable_t& ht, int verbosity) {
-		hashtable_t::const_iterator match = ht.find(bank_hash);
-		if(match == ht.end()) {
-			throw(KToolsError("Incomplete anim hash table (missing bank name)."));
-		}
-
-		bank = match->second;
+	istream& KAnim::loadPost(istream& in, const KAnimNamer& ht, int verbosity) {
+		bank = ht.getBankName(bank_hash);
 		if(verbosity >= 1) {
 			cout << "Got bank name: " << bank << endl;
 		}
+		/*
 		if(strhash(bank) != bank_hash) {
 			throw KToolsError("Bank hash doesn't match bank name.");
 		}
+		*/
 
 		if(verbosity >= 1) {
 			cout << "Post-processing animation frames..." << endl;
@@ -227,15 +330,9 @@ namespace Krane {
 		return in;
 	}
 
-	istream& KAnim::Frame::loadPost(istream& in, const hashtable_t& ht, int verbosity) {
+	istream& KAnim::Frame::loadPost(istream& in, const KAnimNamer& ht, int verbosity) {
 		for(eventmap_t::iterator it = events.begin(); it != events.end(); ++it) {
-			hashtable_t::const_iterator match = ht.find(it->first);
-
-			if(match == ht.end()) {
-				throw(KToolsError("Incomplete anim hash table (missing event name)."));
-			}
-			
-			it->second.name = match->second;
+			it->second.name = ht.getEventName(it->first);
 		}
 
 		if(verbosity >= 2) {
@@ -297,25 +394,13 @@ namespace Krane {
 		return in;
 	}
 
-	istream& KAnim::Frame::Element::loadPost(istream& in, const hashtable_t& ht, int verbosity) {
-		hashtable_t::const_iterator match;
-
-		match = ht.find(hash);
-		if(match == ht.end()) {
-			throw(KToolsError("Incomplete anim hash table (missing element name)."));
-		}
-
-		name = match->second;
+	istream& KAnim::Frame::Element::loadPost(istream& in, const KAnimNamer& ht, int verbosity) {
+		name = ht.getElementName(hash);
 		if(verbosity >= 3) {
 			cout << "\t\t\tGot element name: " << name << endl;
 		}
 
-		match = ht.find(layername_hash);
-		if(match == ht.end()) {
-			throw(KToolsError("Incomplete anim hash table (missing element layer name)."));
-		}
-
-		layername = match->second;
+		layername = ht.getLayerName(layername_hash);
 
 		return in;
 	}
