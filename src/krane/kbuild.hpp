@@ -527,6 +527,8 @@ namespace Krane {
 	public:
 		BinIOHelper io;
 
+		bool shouldHaveHashTable() const;
+
 		static bool checkVersion(int32_t v) {
 			return MIN_VERSION <= v && v <= MAX_VERSION;
 		}

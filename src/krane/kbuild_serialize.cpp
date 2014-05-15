@@ -5,9 +5,12 @@ using namespace std;
 namespace Krane {
 	const uint32_t KBuildFile::MAGIC_NUMBER = *reinterpret_cast<const uint32_t*>("BILD");
 
-	const int32_t KBuildFile::MIN_VERSION = 6;
+	const int32_t KBuildFile::MIN_VERSION = 5;
 	const int32_t KBuildFile::MAX_VERSION = 6;
 
+	bool KBuildFile::shouldHaveHashTable() const {
+		return version >= 6;
+	}
 
 	void KBuildFile::loadFrom(const std::string& path, int verbosity) {
 		if(verbosity >= 0) {
@@ -133,50 +136,63 @@ namespace Krane {
 			}
 		}
 
-		if(verbosity >= 1) {
-			cout << "Loading build hash table..." << endl;
-		}
-		if(!in || in.peek() == EOF) {
-			throw(KToolsError("Missing hash table at the end of the build file."));
-		}
-		uint32_t hashcollection_sz;
-		io->read_integer(in, hashcollection_sz);
+		if(!parent->shouldHaveHashTable() || !in || in.peek() == EOF) {
+			if(parent->shouldHaveHashTable()) {
+				std::cerr << "WARNING: Missing hash table at the end of the build file. Generating automatic names." << std::endl;
+			}
 
-		uint32_t num_namedsymbols = 0;
-		for(uint32_t i = 0; i < hashcollection_sz; i++) {
-			hash_t h;
-			io->read_integer(in, h);
+			DataFormatter fmt;
 
-			Symbol* symb = NULL;
-			{
-				symbol_iter it = symbols.find(h);
-				if(it != symbols.end()) {
-					symb = &(it->second);
+			unsigned long symb_counter = 0;
+			for(symbol_iter it = symbols.begin(); it != symbols.end(); ++it) {
+				Symbol& symb = it->second;
+
+				symb.name = fmt("symbol%02lu", ++symb_counter);
+			}
+		}
+		else {
+			if(verbosity >= 1) {
+				cout << "Loading build hash table..." << endl;
+			}
+			uint32_t hashcollection_sz;
+			io->read_integer(in, hashcollection_sz);
+
+			uint32_t num_namedsymbols = 0;
+			for(uint32_t i = 0; i < hashcollection_sz; i++) {
+				hash_t h;
+				io->read_integer(in, h);
+
+				Symbol* symb = NULL;
+				{
+					symbol_iter it = symbols.find(h);
+					if(it != symbols.end()) {
+						symb = &(it->second);
+					}
+				}
+
+				if(symb == NULL) {
+					io->skip_len_string<uint32_t>(in);
+				}
+				else {
+					io->read_len_string<uint32_t>(in, symb->name);
+					num_namedsymbols++;
+
+					if(strhash(symb->name) != symb->hash) {
+						throw KToolsError("Hash for build symbol '" + symb->name + "' does not match its name.");
+					}
+				}
+
+				if(verbosity >= 2) {
+					cout << "\tGot 0x" << hex << h << dec << " => \"" << symb->name << "\"" << endl;
 				}
 			}
-
-			if(symb == NULL) {
-				io->skip_len_string<uint32_t>(in);
-			}
-			else {
-				io->read_len_string<uint32_t>(in, symb->name);
-				num_namedsymbols++;
-
-				if(strhash(symb->name) != symb->hash) {
-					throw KToolsError("Hash for build symbol '" + symb->name + "' does not match its name.");
+			if(num_namedsymbols != numsymbols) {
+				if(num_namedsymbols < numsymbols) {
+					throw(KToolsError("Incomplete build hash table (missing symbol name)."));
 				}
-			}
-
-			if(verbosity >= 2) {
-				cout << "\tGot 0x" << hex << h << dec << " => \"" << symb->name << "\"" << endl;
-			}
-		}
-		if(num_namedsymbols != numsymbols) {
-			if(num_namedsymbols < numsymbols) {
-				throw(KToolsError("Incomplete build hash table (missing symbol name)."));
-			}
-			else {
-				throw(logic_error("Uncaught hash collision."));
+				else {
+					throw(logic_error("Uncaught hash collision."));
+				}
 			}
 		}
 

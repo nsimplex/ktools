@@ -84,7 +84,7 @@ namespace KTools { namespace BitOp {
 	template<size_t offset, size_t len, typename IntegerType>
 	class BitMask {
 	public:
-		static const IntegerType value = (1 << offset) & BitMask<offset + 1, len - 1, IntegerType>::value;
+		static const IntegerType value = (1 << offset) | BitMask<offset + 1, len - 1, IntegerType>::value;
 	};
 
 	template<size_t offset, typename IntegerType>
