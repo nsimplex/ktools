@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ktex/ktex.hpp"
 #include "binary_io_utils.hpp"
+#include "ktools_bit_op.hpp"
 
 
 using namespace KTools;
@@ -108,7 +109,24 @@ std::ostream& KTools::KTEX::File::Header::dump(std::ostream& out) const {
 	return out;
 }
 
+static void convertFromPreCaves(KTools::KTEX::File::Header& h) {
+	using namespace KTools;
+
+	BitOp::BitQueue<KTools::KTEX::File::Header::data_t> bq(h.data);
+
+	h.data = 0;
+
+	h.setField("platform", bq.pop(3));
+	h.setField("compression", bq.pop(3));
+	h.setField("texture_type", bq.pop(3));
+	h.setField("mipmap_count", bq.pop(4));
+	h.setField("flags", bq.pop(1));
+	h.setField("fill", bq.pop(18));
+}
+
 std::istream& KTools::KTEX::File::Header::load(std::istream& in) {
+	typedef BitOp::BitMask<8*sizeof(data_t) - 18, 18, data_t> precavesMask;
+
 	reset();
 
 	uint32_t magic;
@@ -123,18 +141,22 @@ std::istream& KTools::KTEX::File::Header::load(std::istream& in) {
 	// header, defaulting to little endian if we can't reach a
 	// conclusion.
 	io.setLittleSource();
-	if( getField("fill") == FieldSpecs["fill"].value_default ) {
+	if( (getField("fill") & 0xff) == (FieldSpecs["fill"].value_default & 0xff) ) {
 		io.setNativeSource();
 	}
 	else {
 		Header header_cp = *this;
 		io.reorder(header_cp.data);
-		if( header_cp.getField("fill") == FieldSpecs["fill"].value_default ) {
+		if( (header_cp.getField("fill") & 0xff) == (FieldSpecs["fill"].value_default & 0xff) ) {
 			io.setInverseNativeSource();
 		}
 	}
 	if(io.isInverseNativeSource()) {
 		io.reorder(data);
+	}
+
+	if( (data & precavesMask::value) == precavesMask::value ) {
+		convertFromPreCaves(*this);
 	}
 
 	return in;

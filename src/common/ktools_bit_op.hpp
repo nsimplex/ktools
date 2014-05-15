@@ -80,6 +80,45 @@ namespace KTools { namespace BitOp {
 		}
 		return ret;
 	}
+
+	template<size_t offset, size_t len, typename IntegerType>
+	class BitMask {
+	public:
+		static const IntegerType value = (1 << offset) & BitMask<offset + 1, len - 1, IntegerType>::value;
+	};
+
+	template<size_t offset, typename IntegerType>
+	class BitMask<offset, 0, IntegerType> {
+	public:
+		static const IntegerType value = 0;
+	};
+
+	template<size_t offset, size_t len, typename IntegerType>
+	inline IntegerType sliceInt(IntegerType n) {
+		return (n & BitMask<offset, len, IntegerType>::value) >> offset;
+	}
+
+	template<typename IntegerType>
+	class BitQueue {
+		IntegerType n;
+
+	public:
+		BitQueue(IntegerType _n) : n(_n) {}
+
+		IntegerType pop(size_t bits) {
+			IntegerType ret;
+			if(bits == 8*sizeof(IntegerType)) {
+				ret = n;
+				n = 0;
+			}
+			else {
+				ret = n & ((1 << bits) - 1);
+				n >>= bits;
+				n &= (1 << (8*sizeof(IntegerType) - bits)) - 1;
+			}
+			return ret;
+		}
+	};
 }}
 
 #endif
