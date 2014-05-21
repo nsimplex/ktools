@@ -39,14 +39,14 @@ const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = 
 
 
 static bool should_resize() {
-	return options::width != nil || options::height != nil || options::pow2;
+	return options::width != nil || options::height != nil || options::pow2 || options::force_square;
 }
 
 static void resize_image(Magick::Image& img) {
 	if(!should_resize()) return;
 
 	Magick::Geometry size = img.size();
-	size_t w0 = size.width(), h0 = size.height();
+	const size_t w0 = size.width(), h0 = size.height();
 
 	size.aspect(true);
 
@@ -68,8 +68,22 @@ static void resize_image(Magick::Image& img) {
 		size.height(BitOp::Pow2Rounder::roundUp(size.height()));
 	}
 
+	if(options::force_square) {
+		if(size.width() < size.height()) {
+			size.width(size.height());
+		}
+		else if(size.height() < size.width()) {
+			size.height(size.width());
+		}
+	}
+
 	std::string operation_verb;
 	if(options::extend) {
+		if(options::extend_left) {
+			if(size.width() > w0) {
+				size.xOff( size.width() - w0 );
+			}
+		}
 		img.backgroundColor("transparent");
 		img.extent( size );
 		if(options::verbosity >= 0) {

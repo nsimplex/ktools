@@ -39,7 +39,9 @@ namespace KTech {
 		extern Maybe<size_t> height;
 		extern bool pow2;
 
+		extern bool force_square;
 		extern bool extend;
+		extern bool extend_left;
 	}
 }
 

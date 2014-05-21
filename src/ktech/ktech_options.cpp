@@ -61,9 +61,11 @@ namespace KTech {
 
 		Maybe<size_t> width;
 		Maybe<size_t> height;
-		bool pow2;
+		bool pow2 = false;
 
-		bool extend;
+		bool force_square = false;
+		bool extend = false;
+		bool extend_left = false;
 	}
 }
 
@@ -213,8 +215,14 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		SwitchArg pow2_opt("", "pow2", "Rounds width and height up to a power of 2. Applied after the options `width' and `height', if given.");
 		args.push_back(&pow2_opt);
 
-		SwitchArg extend_opt("", "extend", "Extends the boundaries of the image instead of resizing. Only relevant if either of the options `width', `height' or `pow2' are given. Its primary use is generating save and selection screen portraits.");
+		SwitchArg square_opt("", "square", "Makes the output texture a square, by setting the width and height to their maximum values. Applied after the options `width', `height' and `pow2', if given.");
+		args.push_back(&square_opt);
+
+		SwitchArg extend_opt("", "extend", "Extends the boundaries of the image instead of resizing. Only relevant if either of the options `width', `height', `pow2' or `square' are given. Its primary use is generating save and selection screen portraits.");
 		args.push_back(&extend_opt);
+
+		SwitchArg extendleft_opt("", "extend-left", "Causes the `extend' option to place the original image aligned to the right (filling the space on its left). Implies `extend'.");
+		args.push_back(&extendleft_opt);
 
 
 
@@ -284,7 +292,14 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 
 		options::pow2 = pow2_opt.getValue();
 
+		options::force_square = square_opt.getValue();
+
 		options::extend = extend_opt.getValue();
+
+		options::extend_left = extendleft_opt.getValue();
+		if(options::extend_left) {
+			options::extend = true;
+		}
 
 		if(quiet_flag.getValue()) {
 			options::verbosity = -1;
