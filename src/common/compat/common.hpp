@@ -16,7 +16,7 @@
 #	error "Unknown operating system"
 #endif
 
-#if defined(IS_LINUX) || defined(IS_MAC)
+#if defined(IS_LINUX) || defined(IS_MAC) || defined(unix)
 #	define IS_UNIX
 #endif
 

@@ -20,12 +20,12 @@
 #endif
 
 namespace Compat {
-#ifdef IS_UNIX
-#	define DIR_SEP_MACRO '/'
-#	define DIR_SEP_STR_MACRO "/"
-#else
+#ifdef IS_WINDOWS
 #	define DIR_SEP_MACRO '\\'
 #	define DIR_SEP_STR_MACRO "\\"
+#else
+#	define DIR_SEP_MACRO '/'
+#	define DIR_SEP_STR_MACRO "/"
 #endif
 
 #if !defined(S_ISDIR)
