@@ -1,5 +1,9 @@
+include(AddCompilerFlag)
+
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wno-long-long -Wno-unused-local-typedefs -pedantic")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -pedantic")
+	AddCompilerFlag("-Wno-unused-local-typedefs" CXX_FLAGS CMAKE_CXX_FLAGS)
+	AddCompilerFlag("-Wno-long-long" CXX_FLAGS CMAKE_CXX_FLAGS)
 elseif(MSVC)
   # Force to always compile with W4
   #  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")

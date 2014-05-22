@@ -316,7 +316,7 @@ static void perform_atlas_marking(const Compat::Path& output_path, KBuild* bild)
 }
 
 int main(int argc, char* argv[]) {
-	typedef std::vector< std::pair<Compat::Path, Magick::Image> > imglist_t;
+	//typedef std::vector< std::pair<Compat::Path, Magick::Image> > imglist_t;
 
 	initialize_application(argc, argv);
 

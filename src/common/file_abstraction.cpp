@@ -3,7 +3,14 @@
 using namespace std;
 
 #if defined(HAVE_LIBZIP)
+#	if defined(__GNUC__)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wshadow"
+#	endif
 #	include <zip.h>
+#	if defined(__GNUC__)
+#		pragma GCC diagnostic pop
+#	endif
 #endif
 
 #if defined(HAVE_SSTREAM)

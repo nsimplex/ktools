@@ -12,6 +12,10 @@
 /* define if the C++ implementation have long long */
 #cmakedefine HAVE_LONG_LONG
 
+#cmakedefine HAVE_CSTDDEF
+
+#cmakedefine HAVE_STDDEF_H
+
 /* define if the compiler has stringstream */
 #cmakedefine HAVE_SSTREAM
 

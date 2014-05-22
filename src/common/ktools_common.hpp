@@ -41,6 +41,14 @@ extern "C" {
 #endif
 }
 
+#ifdef HAVE_CSTDDEF
+#	include <cstddef>
+#else
+extern "C" {
+#	include <stddef.h>
+}
+#endif
+
 #include <exception>
 #include <stdexcept>
 #include <cassert>
