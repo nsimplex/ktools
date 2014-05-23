@@ -28,12 +28,24 @@ typedef int mode_t;
 #	define DEPRECATEDFUNCTION __attribute__ ((deprecated))
 #	define CONSTFUNCTION __attribute__ ((const))
 #	define PUREFUNCTION __attribute__ ((pure))
-#	define HOTFUNCTION __attribute__ ((hot))
-#else
+#	if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
+#		define HOTFUNCTION __attribute__ ((hot))
+#	endif
+#endif
+
+#ifndef PRINTFSTYLE
 #	define PRINTFSTYLE(fmt_index, first_to_check)
+#endif
+#ifndef DEPRECATEDFUNCTION
 #	define DEPRECATEDFUNCTION
+#endif
+#ifndef CONSTFUNCTION
 #	define CONSTFUNCTION
+#endif
+#ifndef PUREFUNCTION
 #	define PUREFUNCTION
+#endif
+#ifndef HOTFUNCTION
 #	define HOTFUNCTION
 #endif
 
