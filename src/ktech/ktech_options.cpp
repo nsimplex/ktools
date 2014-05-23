@@ -206,10 +206,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		args.push_back(&no_mipmaps_flag);
 		myOutput.setArgCategory(no_mipmaps_flag, TO_TEX);
 
-		MyValueArg<size_t> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, -1, "pixels");
+		MyValueArg<size_t> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, 0, "pixels");
 		args.push_back(&width_opt);
 
-		MyValueArg<size_t> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, -1, "pixels");
+		MyValueArg<size_t> height_opt("", "height", "Fixed height to be used for the output. Without a width, preserves ratio.", false, 0, "pixels");
 		args.push_back(&height_opt);
 
 		SwitchArg pow2_opt("", "pow2", "Rounds width and height up to a power of 2. Applied after the options `width' and `height', if given.");

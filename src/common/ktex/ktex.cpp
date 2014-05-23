@@ -435,21 +435,21 @@ void KTools::KTEX::File::CompressMipmap(KTools::KTEX::File::Mipmap& M, const KTo
 		img.flip();
 	}
 
-	int width = (int)img.columns();
-	int height = (int)img.rows();
+	const size_t width = img.columns();
+	const size_t height = img.rows();
 
-	if(width <= 0 || height <= 0) {
-		throw(KToolsError("Attempt to compress an image with a non-positive dimension."));
+	if(width == 0 || height == 0) {
+		throw(KToolsError("Attempt to compress an image with zero size."));
 	}
 
-	M.width = width;
-	M.height = height;
+	cast_assign(M.width, width);
+	cast_assign(M.height, height);
 
 	if(fmt.is_uncompressed) {
-		M.pitch = pixel_size*width;
+		cast_assign(M.pitch, pixel_size*width);
 	}
 	else {
-		M.pitch = squish::GetStorageRequirements(width, 1, fmt.squish_flags);
+		cast_assign(M.pitch, squish::GetStorageRequirements(int(width), 1, fmt.squish_flags));
 	}
 
 	Magick::Blob B;
@@ -459,7 +459,7 @@ void KTools::KTEX::File::CompressMipmap(KTools::KTEX::File::Mipmap& M, const KTo
 		M.setDataSize( B.length() );
 	}
 	else {
-		M.setDataSize( squish::GetStorageRequirements(width, height, fmt.squish_flags) );
+		M.setDataSize( squish::GetStorageRequirements(int(width), int(height), fmt.squish_flags) );
 	}
 
 
@@ -467,6 +467,6 @@ void KTools::KTEX::File::CompressMipmap(KTools::KTEX::File::Mipmap& M, const KTo
 		memcpy(M.data, B.data(), B.length());
 	}
 	else {
-		squish::CompressImage( (const squish::u8*)B.data(), width, height, M.data, fmt.squish_flags );
+		squish::CompressImage( (const squish::u8*)B.data(), int(width), int(height), M.data, fmt.squish_flags );
 	}
 }

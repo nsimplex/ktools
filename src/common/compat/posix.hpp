@@ -6,6 +6,8 @@
  * This header provides a compatibility layer so they also work under Unix.
  */
 
+#include "compat/common.hpp"
+
 extern "C" {
 #	include <sys/stat.h>
 }
@@ -74,6 +76,10 @@ extern "C" {
 #endif
 #if !defined(S_ISREG) && defined(S_IFREG)
 #	define S_ISREG(mode) ((mode) & S_IFREG)
+#endif
+
+#if !defined(HAVE_MODE_T)
+typedef int mode_t;
 #endif
 
 #endif

@@ -63,13 +63,13 @@ namespace KTools {
 			class arg_comparer;
 			friend class arg_comparer;
 			class arg_comparer {
-				const Output& o;
+				const Output* o;
 			public:
-				arg_comparer(const Output* _o) : o(*_o) {}
+				arg_comparer(const Output* _o) : o(_o) {}
 
 				// Comparison based on category order.
 				bool operator()(const TCLAP::Arg* a, const TCLAP::Arg* b) const {
-					return o.get_arg_category_idx(a) < o.get_arg_category_idx(b);
+					return o->get_arg_category_idx(a) < o->get_arg_category_idx(b);
 				}
 			};
 
@@ -311,6 +311,7 @@ inline void KTools::options_custom::Output::usage_long(TCLAP::CmdLineInterface& 
 	const size_t ncats = categories.size();
 
 	assert( nargs <= c.getArgList().size() );
+	(void)nargs;
 
 	// Last category idx;
 	size_t last_cat_idx = ncats + 1;

@@ -27,9 +27,15 @@ namespace KTools { namespace ImOp {
 	typedef std::unary_function<Magick::PixelPacket*, void> pixel_operation_t;
 
 	class read : public unary_operation_t {
-		const std::string& path;
+		std::string path;
 	public:
 		read(const std::string& p) : path(p) {}
+		read(const read& r) {*this = r;}
+
+		read& operator=(const read& r) {
+			path = r.path;
+			return *this;
+		}
 
 		void operator()(Magick::Image& img) const {
 			img.read(path);
@@ -37,9 +43,15 @@ namespace KTools { namespace ImOp {
 	};
 
 	class write : public unary_operation_t {
-		const std::string& path;
+		std::string path;
 	public:
 		write(const std::string& p) : path(p) {}
+		write(const write& w) {*this = w;}
+
+		write& operator=(const write& w) {
+			path = w.path;
+			return *this;
+		}
 
 		void operator()(Magick::Image& img) const {
 			img.write(path);
@@ -48,12 +60,18 @@ namespace KTools { namespace ImOp {
 
 	template<typename Container>
 	class SequenceWriter : public std::unary_function<const std::string&, void> {
-		Container& c;
+		Container* c;
 	public:
-		SequenceWriter(Container& _c) : c(_c) {}
+		SequenceWriter(Container& _c) : c(&_c) {}
+		SequenceWriter(Container* _c) : c(_c) {}
+
+		SequenceWriter& operator=(const SequenceWriter& sw) {
+			c = sw.c;
+			return *this;
+		}
 
 		void operator()(const std::string& pathSpec) {
-			Magick::writeImages( c.begin(), c.end(), pathSpec, false );
+			Magick::writeImages( c->begin(), c->end(), pathSpec, false );
 		}
 	};
 
@@ -175,6 +193,11 @@ namespace KTools { namespace ImOp {
 
 	public:
 		SafeOperationWrapper(OpType _op) : op(_op) {}
+
+		SafeOperationWrapper& operator=(const SafeOperationWrapper& sow) {
+			op = sow.op;
+			return *this;
+		}
 
 		result_type operator()(argument_type x) {
 			using namespace std;

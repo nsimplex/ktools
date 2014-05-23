@@ -20,7 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTOOLS_BASIC_HPP
 
 
-#include <config.h>
+#ifdef _MSC_VER
+// Mostly to avoid warnings related to ImageMagick classes.
+// This is why the pragma is done here, and not in compat/*.hpp.
+#	pragma warning( disable: 4251 )
+#endif
+
+
+#include "config.h"
 
 #include "compat.hpp"
 
@@ -166,6 +173,13 @@ namespace KTools {
 	};
 
 
+	template<typename T, typename U>
+	inline T& cast_assign(T& lval, U rval) {
+		lval = static_cast<T>(rval);
+		return lval;
+	}
+
+
 	template<typename T>
 	class ptrLess : public std::binary_function<T*, T*, bool> {
 	public:
@@ -179,7 +193,7 @@ namespace KTools {
 
 	template<typename T> class Maybe;
 
-	template<typename T> Maybe<T> Just(T val);
+	template<typename T> inline Maybe<T> Just(T val);
 
 	template<typename T>
 	class Maybe {
@@ -192,7 +206,7 @@ namespace KTools {
 		Maybe(T _v) : is_nothing(false), v(_v) {}
 
 	public:
-		typedef T vue_type;
+		typedef T value_type;
 
 		Maybe& operator=(const Maybe& m) {
 			is_nothing = m.is_nothing;
@@ -279,7 +293,7 @@ namespace KTools {
 	};
 
 	template<typename T>
-	inline Maybe<T> Just(T val) {
+	Maybe<T> Just(T val) {
 		return Maybe<T>(val);
 	}
 

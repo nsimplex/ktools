@@ -11,17 +11,16 @@
 #	define IS_MAC 1
 #endif
 
-#if defined(IS_LINUX) || defined(IS_MAC) || defined(BSD) || defined(unix) || defined(__unix__) || defined(__unix)
-#	define IS_UNIX
+#if !defined(IS_WINDOWS)
+#	if defined(IS_LINUX) || defined(IS_MAC) || defined(BSD) || defined(unix) || defined(__unix__) || defined(__unix)
+#		define IS_UNIX
+#	endif
 #endif
 
 #if !defined(IS_UNIX) && !defined(IS_WINDOWS)
 #	error "Unknown operating system"
 #endif
 
-#if !defined(HAVE_MODE_T)
-typedef int mode_t;
-#endif
 
 #ifdef __GNUC__
 #	define PRINTFSTYLE(fmt_index, first_to_check) __attribute__ ((format (printf, fmt_index, first_to_check)))
@@ -56,6 +55,18 @@ typedef int mode_t;
 #	ifndef NOMINMAX
 #		define NOMINMAX 1
 #	endif
+#endif
+
+#if defined(_MSC_VER)
+#	if !defined(_CRT_SECURE_NO_WARNINGS)
+#		define _CRT_SECURE_NO_WARNINGS 1
+#	endif
+// Deprecated funcs (such as snprintf).
+#	pragma warning( disable: 4995 )
+// Constant conditional expressions.
+#	pragma warning( disable: 4127 )
+// Failure to generate automatic assignment operator.
+#	pragma warning( disable: 4512 )
 #endif
 
 #endif

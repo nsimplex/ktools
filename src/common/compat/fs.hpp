@@ -373,6 +373,7 @@ namespace Compat {
 		bool mkdir(mode_t mode = 0775, bool fail_on_existence = false) const {
 			int status;
 #if defined(IS_WINDOWS)
+			(void)mode;
 			status = ::_mkdir(c_str());
 #else
 			status = ::mkdir(c_str(), mode);
