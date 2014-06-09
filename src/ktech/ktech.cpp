@@ -159,9 +159,9 @@ static void generate_mipmaps(ImageContainer& imgs) {
 	width /= 2;
 	height /= 2;
 
-	while(width > 0 && height > 0) {
+	while(width > 0 || height > 0) {
 		img.filterType( options::filter );
-		img.resize( Magick::Geometry(width, height) );
+		img.resize( Magick::Geometry(std::max(width, size_t(1)), std::max(height, size_t(1))) );
 		//img.despeckle();
 		imgs.push_back( img );
 
