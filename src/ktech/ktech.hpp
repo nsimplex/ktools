@@ -23,9 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktools_bit_op.hpp"
 #include "ktech_options.hpp"
 #include "ktex/ktex.hpp"
+#include "file_abstraction.hpp"
 
 namespace KTech {
-	KTEX::File::Header parse_commandline_options(int& argc, char**& argv, std::string& input_path, std::string& output_path);
+	KTEX::File::Header parse_commandline_options(int& argc, char**& argv, std::list<VirtualPath>& input_paths, VirtualPath& output_path);
 }
 
 #endif

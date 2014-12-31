@@ -317,7 +317,11 @@ namespace Compat {
 			return true;
 		}
 
-		PathAbstraction& replaceExtension(const std::string& newext) {
+		bool hasExtension() const {
+			return get_extension_position() != npos;
+		}
+
+		void replaceExtension(const std::string& newext) {
 			const size_t start = get_extension_position();
 			if(start == npos) {
 				std::string::append(1, '.');
@@ -326,7 +330,12 @@ namespace Compat {
 				std::string::erase(start);
 			}
 			std::string::append(newext);
-			return *this;
+		}
+
+		PathAbstraction replaceExtension(const std::string& newext, bool) const {
+			PathAbstraction ret(*this);
+			ret.replaceExtension(newext);
+			return ret;
 		}
 
 		PathAbstraction& removeExtension() {
@@ -336,6 +345,10 @@ namespace Compat {
 				std::string::erase(start - 1);
 			}
 			return *this;
+		}
+
+		PathAbstraction removeExtension() const {
+			return PathAbstraction(*this).removeExtension();
 		}
 
 		bool exists() const {

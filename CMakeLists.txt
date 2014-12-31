@@ -1,9 +1,10 @@
 cmake_minimum_required (VERSION 2.8.8)
+cmake_policy(SET CMP0043 NEW)
 Project(ktools CXX)
 
 set(PACKAGE_VERSION_MAJOR 4)
-set(PACKAGE_VERSION_MINOR 1)
-set(PACKAGE_VERSION_PATCH 2)
+set(PACKAGE_VERSION_MINOR 2)
+set(PACKAGE_VERSION_PATCH 0)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}")
 
 OPTION(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
@@ -17,10 +18,10 @@ ENABLE_LANGUAGE(C)
 
 set( COMMON_INCLUDE_DIRS "" )
 set( LINK_DIRS "" )
-set( COMMON_LIBS "ktool_common" "squish" )
+set( COMMON_LIBS "ktool_common" "squish" "pugixml" )
 
 set( ktech_LIBS "" )
-set( krane_LIBS "pugixml" )
+set( krane_LIBS "" )
 
 
 list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" )

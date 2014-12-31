@@ -103,6 +103,8 @@ namespace KTools {
 	void initialize_application(int& argc, char **& argv);
 
 
+	typedef double float_type;
+
 	enum ExitStatus {
 		MagickErrorCode = 1,
 		KTEXErrorCode = 2,
@@ -172,6 +174,36 @@ namespace KTools {
 		U second;
 	};
 
+	class lcstring {
+	public:
+		const char * const data;
+		const size_t len;
+
+		lcstring(const char *s) : data(s), len(::strlen(s)) {}
+		lcstring(const char *s, size_t l) : data(s), len(l) {}
+		lcstring(const std::string& s) : data(s.c_str()), len(s.length()) {}
+
+		inline operator const char*() const {
+			return data;
+		}
+
+		inline const char* operator()(void) const {
+			return data;
+		}
+
+		inline size_t length() const {
+			return len;
+		}
+
+		inline size_t size() const {
+			return len;
+		}
+
+		inline std::string tostring() const {
+			return std::string(data, len);
+		}
+	};
+
 
 	template<typename T, typename U>
 	inline T& cast_assign(T& lval, U rval) {
@@ -191,6 +223,18 @@ namespace KTools {
 
 	static const class Nil { public: Nil() {} } nil;
 
+	static inline bool operator==(Magick::Image img, Nil) {
+		if(img.columns() == 0) {
+			assert( img.rows() == 0 );
+			return true;
+		}
+		else {
+			assert( img.rows() > 0 );
+			return false;
+		}
+	}
+
+
 	template<typename T> class Maybe;
 
 	template<typename T> inline Maybe<T> Just(T val);
@@ -203,7 +247,7 @@ namespace KTools {
 		bool is_nothing;
 		T v;
 
-		Maybe(T _v) : is_nothing(false), v(_v) {}
+		explicit Maybe(T _v) : is_nothing(false), v(_v) {}
 
 	public:
 		typedef T value_type;
@@ -306,10 +350,10 @@ namespace KTools {
 	 * (the buffer is reused)
 	 */
 	class DataFormatter {
-		char buffer[1 << 15];
+		mutable char buffer[1 << 15];
 
 	public:
-		const char * operator()(const char * fmt, ...);
+		const char * operator()(const char * fmt, ...) const;
 	};
 
 	template<typename charT, typename charTraits>
@@ -342,6 +386,10 @@ catch(Magick::WarningCoder& warning) { \
 } \
 catch(Magick::Warning& warning) { \
 	std::cerr << "Warning: " << warning.what() << std::endl; \
+} \
+catch(Magick::Error& err) { \
+	cerr << "Error: " << err.what() << endl; \
+	exit(MagickErrorCode); \
 }
 
 

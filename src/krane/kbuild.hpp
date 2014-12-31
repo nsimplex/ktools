@@ -30,7 +30,7 @@ namespace Krane {
 	class KBuild : public NestedSerializer<KBuildFile> {
 		friend class KBuildFile;
 	public:
-		typedef computations_float_type float_type;
+		
 
 		// This is the scale applied by the scml compiler in the mod tools.
 		static const float_type MODTOOLS_SCALE;

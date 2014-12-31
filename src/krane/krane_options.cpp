@@ -138,7 +138,7 @@ void Krane::parse_commandline_options(int& argc, char**& argv, std::list<KTools:
 		/*
 		 * This only marks the option visually, since all paths are globbed by multiinput_opt.
 		 */
-		ArgumentOption dummy_output_opt("OUTPUT-DIR", "Output path.", false, "OUTPUT-DIR");
+		ArgumentOption dummy_output_opt("OUTPUT-PATH", "Output path.", false, "OUTPUT-DIR");
 		dummy_output_opt.setVisuallyRequired(true);
 		cmd.add(dummy_output_opt);
 

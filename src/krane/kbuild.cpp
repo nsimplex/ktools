@@ -4,7 +4,7 @@ using namespace std;
 
 namespace Krane {
 	// This is the scale applied by the scml compiler in the mod tools.
-	const KBuild::float_type KBuild::MODTOOLS_SCALE = 1.0/3;
+	const float_type KBuild::MODTOOLS_SCALE = 1.0/3;
 
 
 	void KBuild::Symbol::Frame::getGeometry(Magick::Geometry& geo) const {

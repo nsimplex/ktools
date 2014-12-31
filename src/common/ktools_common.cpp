@@ -60,7 +60,7 @@ namespace KTools {
 		return s;
 	}
 
-	const char * DataFormatter::operator()(const char * fmt, ...) {
+	const char * DataFormatter::operator()(const char * fmt, ...) const {
 		va_list ap;
 		va_start(ap, fmt);
 

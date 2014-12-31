@@ -1,7 +1,8 @@
-#ifndef KRANE_ALGEBRA_HPP
-#define KRANE_ALGEBRA_HPP
+#ifndef KTOOLS_ALGEBRA_HPP
+#define KTOOLS_ALGEBRA_HPP
 
 #include "ktools_common.hpp"
+#include "metaprogramming.hpp"
 
 namespace KTools {
 	template<size_t N, typename T>
@@ -14,7 +15,7 @@ namespace KTools {
 	class ProjectiveMatrix; 
 
 
-	template<size_t N, typename T = float>
+	template<size_t N, typename T = float_type>
 	class Vector {
 		template<size_t M, typename U>
 		friend class Vector;
@@ -129,7 +130,7 @@ namespace KTools {
 		}
 	};
 
-	template<size_t n, typename T = float>
+	template<size_t n, typename T = float_type>
 	class SquareMatrix : public Vector<n*n, T> {
 		template<size_t M, typename U>
 		friend class Vector;
@@ -253,7 +254,7 @@ namespace KTools {
 		}
 	};
 
-	template<size_t n, typename T = float>
+	template<size_t n, typename T = float_type>
 	class ProjectiveMatrix : public SquareMatrix<n + 1, T> {
 		template<size_t M, typename U>
 		friend class Vector;
@@ -404,7 +405,7 @@ namespace KTools {
 		return N;
 	}
 
-	template<typename T = float, size_t N = 3>
+	template<typename T = float_type, size_t N = 3>
 	class Triangle {
 	public:
 		typedef Vector<N, T> vertex_type;
@@ -429,11 +430,43 @@ namespace KTools {
 		}
 	};
 
-	template<typename T = float>
+	template<size_t coord, typename bbox_t>
+	class BoundingBoxAccessor {};
+
+	template<typename bbox_t>
+	class BoundingBoxAccessor<0, bbox_t> {
+	public:
+		typedef typename bbox_t::scalar_type scalar_type;
+
+		static inline scalar_type min(const bbox_t& bbox) {
+			return bbox.x();
+		}
+
+		static inline scalar_type max(const bbox_t& bbox) {
+			return bbox.xmax();
+		}
+	};
+
+	template<typename bbox_t>
+	class BoundingBoxAccessor<1, bbox_t> {
+	public:
+		typedef typename bbox_t::scalar_type scalar_type;
+
+		static inline scalar_type min(const bbox_t& bbox) {
+			return bbox.y();
+		}
+
+		static inline scalar_type max(const bbox_t& bbox) {
+			return bbox.ymax();
+		}
+	};
+
+	template<typename T = float_type>
 	class BoundingBox {
 	public:
 		typedef Vector<2, T> vector_type;
 		typedef vector_type point_type;
+		typedef T scalar_type;
 
 	private:
 		vector_type bottom_left;
@@ -448,14 +481,75 @@ namespace KTools {
 			return int(ceil(val));
 		}
 
+		static const size_t X_COORD = 0;
+		static const size_t Y_COORD = 1;
+
+		template<size_t primary_coord, size_t secondary_coord>
+		static bool lex_compare(const BoundingBox& A, const BoundingBox& B) {
+			typedef BoundingBoxAccessor<primary_coord, BoundingBox> major;
+			typedef BoundingBoxAccessor<secondary_coord, BoundingBox> minor;
+
+			const T major_A_min = major::min(A);
+			const T major_B_min = major::min(B);
+
+			if(major_A_min < major_B_min) {
+				return true;
+			}
+			else if(major_A_min > major_B_min) {
+				return false;
+			}
+
+			const T minor_A_min = minor::min(A);
+			const T minor_B_min = minor::min(B);
+
+			if(minor_A_min < minor_B_min) {
+				return true;
+			}
+			else if(minor_A_min > minor_B_min) {
+				return false;
+			}
+
+			/*
+			 * The corners coincide.
+			 * Now we just check if A is a proper subset of B.
+			 */
+
+			const float_type A_xmax = A.xmax();
+			const float_type B_xmax = B.xmax();
+
+			if(A_xmax > B_xmax) {
+				return false;
+			}
+			if(A_xmax == B_xmax) {
+				return A.ymax() < B.ymax();
+			}
+			else {
+				return A.ymax() <= B.ymax();
+			}
+		}
+
 	public:
 		BoundingBox() : bottom_left(), top_right(), initialized(false) {}
 		BoundingBox(T _x, T _y, T _w, T _h) {
 			setDimensions(_x, _y, _w, _h);
 		}
 
+		BoundingBox(const BoundingBox& bbox) :
+			bottom_left(bbox.bottom_left),
+			top_right(bbox.top_right),
+			initialized(bbox.initialized) {
+		}
+
 		operator bool() const {
 			return initialized;
+		}
+
+		inline bool lexXYLess(const BoundingBox& bbox) const {
+			return lex_compare<X_COORD, Y_COORD>(*this, bbox);
+		}
+
+		inline bool lexYXLess(const BoundingBox& bbox) const {
+			return lex_compare<Y_COORD, X_COORD>(*this, bbox);
 		}
 
 		const vector_type& bottomLeft() const {

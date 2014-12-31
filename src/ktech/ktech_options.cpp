@@ -66,6 +66,8 @@ namespace KTech {
 		bool force_square = false;
 		bool extend = false;
 		bool extend_left = false;
+
+		Maybe<VirtualPath> atlas_path;
 	}
 }
 
@@ -149,7 +151,7 @@ static const std::string FROM_TEX = "Options for TEX input";
 static const std::string TO_TEX = "Options for TEX output";
 
 
-KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, string& input_path, string& output_path) {
+KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, std::list<VirtualPath>& input_paths, VirtualPath& output_path) {
 	using namespace KTech::options_custom;
 
 	KTEX::File::Header configured_header;
@@ -175,6 +177,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		myOutput.addCategory(FROM_TEX);
 		myOutput.addCategory(TO_TEX);
 
+
+		MyValueArg<string> atlas_path_opt("", "atlas", "Name of the atlas to be generated.", false, "", "path");
+		args.push_back(&atlas_path_opt);
+		myOutput.setArgCategory(atlas_path_opt, TO_TEX);
 
 		str_trans comp_trans("compression");
 		ValuesConstraint<string> allowed_comps(comp_trans.opts);
@@ -246,12 +252,17 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		SwitchArg quiet_flag("q", "quiet", "Disables text output. Overrides the verbosity value.");
 		args.push_back(&quiet_flag);
 
+		///
+		
+		MultiArgumentOption multiinput_opt("INPUT-PATH", "Input path.", true, "INPUT-PATH");
+		cmd.add(multiinput_opt);
 
-		ArgumentOption input_opt("input-file", "Input path.", true, "input-file[,...]");
-		cmd.add(input_opt);
-
-		ArgumentOption output_opt("output-path", "Output path.", false, "output-path");
-		cmd.add(output_opt);
+		/*
+		 * This only marks the option visually, since all paths are globbed by multiinput_opt.
+		 */
+		ArgumentOption dummy_output_opt("OUTPUT-DIR", "Output path.", false, "OUTPUT-DIR");
+		dummy_output_opt.setVisuallyRequired(true);
+		cmd.add(dummy_output_opt);
 
 
 		for(list<Arg*>::reverse_iterator it = args.rbegin(); it != args.rend(); ++it) {
@@ -261,6 +272,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 
 		cmd.parse(argc, argv);
 
+
+		if(atlas_path_opt.isSet()) {
+			options::atlas_path = Just( VirtualPath(atlas_path_opt.getValue()) );
+		}
 
 		configured_header.setField("compression", comp_trans.translate(compression_opt));
 		configured_header.setField("texture_type", type_trans.translate(type_opt));
@@ -310,9 +325,16 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, str
 		
 		options::info = info_flag.getValue();
 
-		input_path = input_opt.getValue();
-		output_path = output_opt.getValue();
 
+		const std::vector<std::string>& all_paths = multiinput_opt.getValue();
+		if(all_paths.empty()) {
+			throw KToolsError("at least one path expected as argument.");
+		}
+
+		std::copy(all_paths.begin(), all_paths.end(), std::back_inserter(input_paths));
+
+		output_path = input_paths.back();
+		input_paths.pop_back();
 	} catch (ArgException& e) {
 		cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
 		exit(1);

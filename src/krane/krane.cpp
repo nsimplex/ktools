@@ -49,7 +49,7 @@ static Magick::Image load_image(const path_t& path) {
 		if(options::verbosity >= 0) {
 			cout << "Loading atlas from `" << path << "'..." << endl;
 		}
-		std::istream* in = path.openIn(std::ifstream::binary);
+		std::istream* in = path.open_in(std::ifstream::binary);
 		try {
 			ktex.load(*in, 0);
 		}
@@ -175,7 +175,7 @@ static KBuild* process_input_list(const pathlist_t& inputs, KAnimBankCollection&
 	KBuild* bild = NULL;
 
 	for(iter_t it = inputs.begin(); it != inputs.end(); ++it) {
-		std::istream* in = it->openIn(std::istream::binary);
+		std::istream* in = it->open_in(std::istream::binary);
 		check_stream_validity(*in, *it);
 
 		const uint32_t magic_number = BinIOHelper::getMagicNumber(*in);

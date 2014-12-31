@@ -4,6 +4,7 @@ set( local_ktech_SOURCES
 
 set( local_ktech_HEADERS
 	ktech/ktech.hpp ktech/ktech_common.hpp 
+	ktech/image_processing.hpp
 	ktech/ktech_options.hpp
 	common/compat.hpp common/compat/common.hpp common/compat/posix.hpp common/compat/fs.hpp
 	common/metaprogramming.hpp common/ktools_common.hpp
@@ -37,16 +38,18 @@ set( local_krane_HEADERS
 
 set( local_ktool_common_SOURCES
 	common/ktools_common.cpp
-	common/ktex/ktex.cpp common/ktex/specs.cpp
 	common/file_abstraction.cpp
+	common/ktex/ktex.cpp common/ktex/specs.cpp
+	common/atlas.cpp
 	common/ktools_options_customization.cpp
 )
 
 set( local_ktool_common_HEADERS
 	common/metaprogramming.hpp common/ktools_common.hpp
 	common/ktools_bit_op.hpp common/image_operations.hpp common/binary_io_utils.hpp
-	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
 	common/file_abstraction.hpp
+	common/ktex/ktex.hpp common/ktex/specs.hpp common/ktex/headerfield_specs.hpp
+	common/atlas.hpp
 	common/ktools_options_customization.hpp
 )
 

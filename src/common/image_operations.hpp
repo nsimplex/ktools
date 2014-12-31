@@ -22,9 +22,243 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktools_common.hpp"
 #include <functional>
 
-namespace KTools { namespace ImOp {
-	typedef std::unary_function<Magick::Image&, void> unary_operation_t;
-	typedef std::unary_function<Magick::PixelPacket*, void> pixel_operation_t;
+namespace KTools {
+	namespace KTEX {
+		class File;
+	}
+namespace ImOp {
+	typedef std::unary_function<Magick::Image&, void> basic_image_operation_t;
+	typedef std::unary_function<Magick::PixelPacket*, void> basic_pixel_operation_t;
+	typedef std::unary_function<KTEX::File&, void> basic_ktex_operation_t;
+
+	typedef basic_image_operation_t basic_unary_operation_t;
+
+	template<typename argument_type, typename result_type = void>
+	class operation_t : public std::unary_function<argument_type, result_type> {
+	public:
+		typedef std::unary_function<argument_type, result_type> basic_operation_t;
+
+		typedef operation_t type;
+
+		/*
+		operation_t() {}
+		operation_t(const operation_t&) {}
+		*/
+
+		virtual ~operation_t() {}
+
+		virtual result_type call(argument_type arg) const = 0;
+
+		template<template<typename T, typename A> class Container, typename Alloc>
+		void call(Container<argument_type, Alloc>& C) const {
+			typedef typename Container<argument_type, Alloc>::iterator iterator;
+
+			for(iterator it = C.begin(); it != C.end(); ++it) {
+				call(*it);
+			}
+		}
+
+		inline result_type operator()(argument_type arg) const {
+			return call(arg);
+		}
+
+		template<typename T>
+		inline result_type operator()(T& arg) const {
+			return call(arg);
+		}
+	};
+
+	template<typename first_argument_type, typename second_argument_type>
+	class binary_operation_t : public std::binary_function<first_argument_type, second_argument_type, void> {
+	public:
+		typedef std::binary_function<first_argument_type, second_argument_type, void> basic_operation_t;
+
+		typedef binary_operation_t type;
+
+		virtual ~binary_operation_t() {}
+
+		virtual void call(first_argument_type arg1, second_argument_type arg2) const = 0;
+
+		inline void operator()(first_argument_type arg1, second_argument_type arg2) const {
+			call(arg1, arg2);
+		}
+	};
+
+	///
+
+	typedef operation_t<Magick::Image&> image_operation_t;
+	typedef image_operation_t unary_operation_t;
+
+	typedef operation_t<KTEX::File&> ktex_operation_t;
+
+	typedef operation_t<Magick::PixelPacket*> pixel_operation_t;
+
+	///
+
+	template<class Op>
+	class reference_caller {};
+
+	template<typename argument_type, typename result_type>
+	class reference_caller< operation_t<argument_type, result_type> > : public operation_t<argument_type, result_type> {
+	public:
+		typedef operation_t<argument_type, result_type> basic_operation;
+
+		virtual const basic_operation* get_pointer() const = 0;
+
+		result_type docall(argument_type arg) const {
+			return get_pointer()->call(arg);
+		}
+
+		virtual result_type call(argument_type arg) const {
+			return docall(arg);
+		}
+	};
+
+	template<typename Arg1, typename Arg2>
+	class reference_caller< binary_operation_t<Arg1, Arg2> > : public binary_operation_t<Arg1, Arg2> {
+	public:
+		typedef binary_operation_t<Arg1, Arg2> basic_operation;
+
+		virtual const basic_operation* get_pointer() const = 0;
+
+		void docall(Arg1 arg1, Arg2 arg2) const {
+			get_pointer()->call(arg1, arg2);
+		}
+
+		virtual void call(Arg1 arg1, Arg2 arg2) const {
+			docall(arg1, arg2);
+		}
+	};
+
+	///
+
+	template<typename basic_operation>
+	class operation_ref_t : public reference_caller< typename basic_operation::type > {
+		Magick::Blob ref;
+		
+		void take_ownership(basic_operation* op, size_t sz) {
+			ref.updateNoCopy(op, sz);
+		}
+
+		void copy_data(const basic_operation* op, size_t sz) {
+			ref.update(op, sz);
+		}
+
+	public:
+		operation_ref_t() { assert(ref.length() == 0); }
+
+		template<typename derivative_type>
+		explicit operation_ref_t(derivative_type* op) {
+			take_ownership(op, sizeof(*op));
+		}
+
+		template<typename derivative_type>
+		static inline operation_ref_t copy(const derivative_type& f) {
+			return operation_ref_t(f);
+		}
+
+		operation_ref_t(const operation_ref_t& x) : ref(x.ref) {}
+
+		template<typename derivative_type>
+		operation_ref_t(const derivative_type& f) {
+			take_ownership(new derivative_type(f), sizeof(f));
+		}
+
+		operation_ref_t& operator=(const operation_ref_t& x) {
+			ref = x.ref;
+			return *this;
+		}
+
+		virtual const basic_operation* get_pointer() const {
+			if(empty()) {
+				throw Error("Attempt to access null reference.");
+			}
+			return reinterpret_cast<const basic_operation*>(ref.data());
+		}
+
+		inline const basic_operation& deference() const {
+			return *get_pointer();
+		}
+
+		const basic_operation& operator*() const {
+			return deference();
+		}
+
+		const basic_operation* operator->() const {
+			return get_pointer();
+		}
+
+		operator const basic_operation&() const {
+			return deference();
+		}
+
+		inline bool empty() const {
+			return ref.length() == 0;
+		}
+
+		inline operator bool() const {
+			return !empty();
+		}
+
+		inline bool operator==(Nil) const {
+			return empty();
+		}
+	};
+
+	///
+
+	template<typename argument_type>
+	class operation_chain : public operation_t<argument_type> {
+	public:
+		typedef operation_t<argument_type> element_type;
+		typedef operation_ref_t<element_type> reference_type;
+
+	private:
+		typedef std::deque<reference_type> chain_t;
+		typedef typename chain_t::iterator iterator;
+		typedef typename chain_t::const_iterator const_iterator;
+
+		chain_t chain;
+
+	public:
+		operation_chain() : chain() {}
+
+		void clear() {
+			chain.clear();
+		}
+
+		virtual ~operation_chain() {
+			clear();
+		}
+
+		virtual void call(argument_type arg) const {
+			for(const_iterator it = chain.begin(); it != chain.end(); ++it) {
+				it->call(arg);
+			}
+		}
+
+		template<typename derivative_type>
+		void push_back(const derivative_type* f) {
+			chain.push_back( reference_type(f) );
+		}
+
+		template<typename derivative_type>
+		void push_back(const derivative_type& f) {
+			chain.push_back( reference_type::copy(f) );
+		}
+
+		operation_chain& operator<<(const element_type* f) {
+			push_back(f);
+			return *this;
+		}
+	};
+
+	typedef operation_chain<Magick::Image&> image_operation_chain;
+	typedef image_operation_chain unary_operation_chain;
+
+	typedef operation_chain<KTEX::File&> ktex_operation_chain;
+
+	///
 
 	class read : public unary_operation_t {
 		std::string path;
@@ -37,7 +271,7 @@ namespace KTools { namespace ImOp {
 			return *this;
 		}
 
-		void operator()(Magick::Image& img) const {
+		virtual void call(Magick::Image& img) const {
 			img.read(path);
 		}
 	};
@@ -53,13 +287,13 @@ namespace KTools { namespace ImOp {
 			return *this;
 		}
 
-		void operator()(Magick::Image& img) const {
+		virtual void call(Magick::Image& img) const {
 			img.write(path);
 		}
 	};
 
 	template<typename Container>
-	class SequenceWriter : public std::unary_function<const std::string&, void> {
+	class SequenceWriter : public operation_t<const std::string&> {
 		Container* c;
 	public:
 		SequenceWriter(Container& _c) : c(&_c) {}
@@ -70,7 +304,7 @@ namespace KTools { namespace ImOp {
 			return *this;
 		}
 
-		void operator()(const std::string& pathSpec) {
+		virtual void call(const std::string& pathSpec) const {
 			Magick::writeImages( c->begin(), c->end(), pathSpec, false );
 		}
 	};
@@ -94,7 +328,7 @@ namespace KTools { namespace ImOp {
 
 	class premultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		void operator()(Magick::PixelPacket* p) const {
+		virtual void call(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
 			double a = 1 - double(p->opacity)/QuantumRange;
@@ -109,7 +343,7 @@ namespace KTools { namespace ImOp {
 
 	class demultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		void operator()(Magick::PixelPacket* p) const {
+		virtual void call(Magick::PixelPacket* p) const {
 			using namespace Magick;
 
 			const double a = 1 - double(p->opacity)/QuantumRange;
@@ -124,10 +358,10 @@ namespace KTools { namespace ImOp {
 	};
 
 	template<typename PixelOperation>
-	class pixelMap : public unary_operation_t {
+	class pixelMap : public image_operation_t {
 		PixelOperation op;
 	public:
-		void operator()(Magick::Image& img) const {
+		virtual void call(Magick::Image& img) const {
 			using namespace Magick;
 			img.type(TrueColorMatteType);
 			img.modifyImage();
@@ -162,11 +396,11 @@ namespace KTools { namespace ImOp {
 
 	class demultiplyAlpha : public pixelMap<demultiplyPixelAlpha> {};
 
-	class cleanNoise : public unary_operation_t {
+	class cleanNoise : public image_operation_t {
 	public:
 		cleanNoise() {}
 
-		void operator()(Magick::Image& img) const {
+		virtual void call(Magick::Image& img) const {
 			using namespace Magick;
 
 			img.despeckle();
@@ -183,51 +417,6 @@ namespace KTools { namespace ImOp {
 			img.matte(true);
 		}
 	};
-
-	template<typename OpType>
-	class SafeOperationWrapper : public std::unary_function<typename OpType::argument_type, typename OpType::result_type> {
-		OpType op;
-
-		typedef typename OpType::argument_type argument_type;
-		typedef typename OpType::result_type result_type;
-
-	public:
-		SafeOperationWrapper(OpType _op) : op(_op) {}
-
-		SafeOperationWrapper& operator=(const SafeOperationWrapper& sow) {
-			op = sow.op;
-			return *this;
-		}
-
-		result_type operator()(argument_type x) {
-			using namespace std;
-
-			try {
-				return op(x);
-			}
-			catch(Magick::WarningCoder& warning) {
-				cerr << "Coder warning: " << warning.what() << endl;
-			}
-			catch(Magick::Warning& warning) {
-				cerr << "Warning: " << warning.what() << endl;
-			}
-			catch(Magick::Error& err) {
-				cerr << "Error: " << err.what() << endl;
-				exit(MagickErrorCode);
-			}
-			catch(std::exception& err) {
-				cerr << "Error: " << err.what() << endl;
-				exit(GeneralErrorCode);
-			}
-
-			return result_type();
-		}
-	};
-
-	template<typename OpType>
-	inline SafeOperationWrapper<OpType> safeWrap(OpType op) {
-		return SafeOperationWrapper<OpType>(op);
-	}
 }}
 
 #endif

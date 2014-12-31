@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ktech.hpp"
 #include "image_operations.hpp"
 #include "file_abstraction.hpp"
+#include "image_processing.hpp"
+#include "atlas.hpp"
 
 
 // For non-KTEX.
@@ -30,84 +32,15 @@ using namespace Compat;
 using namespace std;
 
 
-typedef VirtualPath path_t;
-
-
 template<typename IntegerType>
 const IntegerType KTech::BitOp::Pow2Rounder::Metadata<IntegerType>::max_pow_2 = Pow2Rounder::roundDown<IntegerType>( std::numeric_limits<IntegerType>::max() );
 
-
-
-static bool should_resize() {
-	return options::width != nil || options::height != nil || options::pow2 || options::force_square;
-}
-
-static void resize_image(Magick::Image& img) {
-	if(!should_resize()) return;
-
-	Magick::Geometry size = img.size();
-	const size_t w0 = size.width(), h0 = size.height();
-
-	size.aspect(true);
-
-	if(options::width != nil && options::height != nil) {
-		size.width(options::width);
-		size.height(options::height);
-	}
-	else if(options::width != nil) {
-		size.width(options::width);
-		size.height((h0*size.width())/w0);
-	}
-	else if(options::height != nil) {
-		size.height(options::height);
-		size.width((w0*size.height())/h0);
-	}
-
-	if(options::pow2) {
-		size.width(BitOp::Pow2Rounder::roundUp(size.width()));
-		size.height(BitOp::Pow2Rounder::roundUp(size.height()));
-	}
-
-	if(options::force_square) {
-		if(size.width() < size.height()) {
-			size.width(size.height());
-		}
-		else if(size.height() < size.width()) {
-			size.height(size.width());
-		}
-	}
-
-	std::string operation_verb;
-	if(options::extend) {
-		if(options::extend_left) {
-			if(size.width() > w0) {
-				size.xOff( size.width() - w0 );
-			}
-		}
-		img.backgroundColor("transparent");
-		img.extent( size );
-		if(options::verbosity >= 0) {
-			operation_verb = "Extended";
-		}
-	}
-	else {
-		img.filterType( options::filter );
-		img.resize( size );
-		if(options::verbosity >= 0) {
-			operation_verb = "Resized";
-		}
-	}
-
-	if(options::verbosity >= 0) {
-		std::cout << operation_verb << " image to " << img.columns() << "x" << img.rows() << std::endl;
-	}
-}
 
 /*
  * Returns whether the output path already includes the extension. If explicitly given, this will always be assumed.
  * If the extension is missing, output_path will end with '.'.
  */
-static bool process_paths(const Path& input_path, Path& output_path) {
+static bool process_paths(const Path& input_path, VirtualPath& output_path) {
 	if(output_path.empty() || output_path.isDirectory()) {
 		output_path /= input_path.basename();
 		output_path.removeExtension();
@@ -131,44 +64,10 @@ static void read_images(const PathContainer& paths, ImageContainer& imgs) {
 
 	for(pc_iter it = paths.begin(); it != paths.end(); ++it) {
 		imgs.push_back( img_t() );
-		ImOp::safeWrap( ImOp::read(*it) )( imgs.back() );
+		MAGICK_WRAP( ImOp::read(*it).call(imgs.back()) );
 	}
 }
 
-template<typename ImageContainer>
-static void generate_mipmaps(ImageContainer& imgs) {
-	typedef typename ImageContainer::value_type img_t;
-
-	if(options::no_mipmaps || imgs.size() > 1) {
-		if(options::verbosity >= 1) {
-			std::cout << "Skipping mipmap generation..." << std::endl;
-		}
-		return;
-	}
-
-	img_t img = imgs.front();
-
-	size_t width = img.columns();
-	size_t height = img.rows();
-
-	if(options::verbosity >= 1) {
-		const size_t mipmap_count = BitOp::countBinaryDigits( std::min(width, height) );
-		std::cout << "Generating " << mipmap_count << " mipmaps..." << std::endl;
-	}
-
-	width /= 2;
-	height /= 2;
-
-	while(width > 0 || height > 0) {
-		img.filterType( options::filter );
-		img.resize( Magick::Geometry(std::max(width, size_t(1)), std::max(height, size_t(1))) );
-		//img.despeckle();
-		imgs.push_back( img );
-
-		width /= 2;
-		height /= 2;
-	}
-}
 
 template<typename PathContainer>
 static void convert_to_KTEX(const PathContainer& input_paths, const string& output_path, const KTEX::File::Header& h) {
@@ -182,12 +81,20 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 		throw Error("Attempt to resize a mipchain.");
 	}
 
+	assert( !input_paths.empty() );
+
 	if(verbosity >= 0) {
 		cout << "Loading non-TEX from `" << input_paths.front() << "'";
-		for(pc_iter it = ++input_paths.begin(); it != input_paths.end(); ++it) {
+
+		size_t count = 1;
+		for(pc_iter it = ++input_paths.begin(); it != input_paths.end(); ++it, ++count) {
 			cout << ", `" << *it << "'";
+			if(count > 4 && verbosity < 3) {
+				cout << ", [...]";
+				break;
+			}
 		}
-		cout << "..." << endl;
+		cout << "." << endl;
 	}
 	image_container_t imgs;
 	if(input_paths.size() > 1) {
@@ -196,29 +103,8 @@ static void convert_to_KTEX(const PathContainer& input_paths, const string& outp
 	read_images( input_paths, imgs );
 	assert( input_paths.size() == imgs.size() );
 
-	resize_image( imgs.front() );
-
-	generate_mipmaps( imgs );
-
-	{
-		image_iterator_t first_secondary_mipmap = imgs.begin();
-		std::advance(first_secondary_mipmap, 1);
-		std::for_each( first_secondary_mipmap, imgs.end(), ImOp::cleanNoise() );
-	}
-
-	if(!options::no_premultiply) {
-		if(verbosity >= 1) {
-			std::cout << "Premultiplying alpha..." << std::endl;
-		}
-		std::for_each( imgs.begin(), imgs.end(), ImOp::premultiplyAlpha() );
-	}
-	else if(verbosity >= 1) {
-		std::cout << "Skipping alpha premultiplication..." << std::endl;
-	}
-
-	KTech::KTEX::File tex;
-	tex.header = h;
-	tex.CompressFrom(imgs.begin(), imgs.end(), verbosity);
+	KTEX::File tex;
+	ImOp::ktexCompressor(h, std::min(options::verbosity, 0)).compress( tex, imgs );
 	tex.dumpTo(output_path, verbosity);
 }
 
@@ -244,32 +130,10 @@ static void convert_from_KTEX(std::istream& in, const string& input_path, const 
 		const size_t fmt_pos = output_path.find(fmt_string);
 		const bool multiple_mipmaps = ( fmt_pos != string::npos );
 
-		std::list<Magick::Image> imgs;
+		std::deque<Magick::Image> imgs;
 
-		if(multiple_mipmaps) {
-			if(should_resize()) {
-				throw Error("Attempt to resize a mipchain.");
-			}
-			tex.Decompress( std::back_inserter(imgs), verbosity );
-		}
-		else {
-			imgs.push_back( tex.Decompress(verbosity) );
-		}
-
-		if(!options::no_premultiply) {
-			if(verbosity >= 1) {
-				std::cout << "Demultiplying alpha..." << std::endl;
-			}
-			std::for_each( imgs.begin(), imgs.end(), ImOp::demultiplyAlpha() );
-		}
-		else if(verbosity >= 1) {
-			std::cout << "Skipping alpha demultiplication..." << std::endl;
-		}
-
-		resize_image( imgs.front() );
-
-		std::for_each( imgs.begin(), imgs.end(), Magick::qualityImage(options::image_quality) );
-
+		ImOp::ktexDecompressor(std::min(options::verbosity, 0), multiple_mipmaps).decompress( tex, imgs );
+		
 		if(verbosity >= 0) {
 			if(multiple_mipmaps) {
 				const size_t fmt_end = fmt_pos + fmt_string.length();
@@ -293,16 +157,96 @@ static void convert_from_KTEX(std::istream& in, const string& input_path, const 
 			}
 		}
 		if(multiple_mipmaps) {
-			ImOp::safeWrap( ImOp::writeSequence(imgs) )( output_path );
+			MAGICK_WRAP( ImOp::writeSequence(imgs).call(output_path) );
 		}
 		else {
-			ImOp::safeWrap( ImOp::write(output_path) )( imgs.front() );
+			MAGICK_WRAP( ImOp::write(output_path).call(imgs.front()) );
 		}
 		if(verbosity >= 0) {
 			std::cout << "Saved." << std::endl;
 		}
 	}
 }
+
+///
+
+template<typename Container>
+static void synthesize_atlas(const VirtualPath& atlas_path, Container input_paths, KTEX::File::Header h) {
+	Atlas A;
+
+	A.setCompressor( ImOp::ktexCompressor(h) );
+
+	typedef typename Container::const_iterator pc_iter;
+	typedef std::vector<Magick::Image> image_container_t;
+	typedef image_container_t::iterator image_iterator_t;
+
+	const int verbosity = options::verbosity;
+
+	if(verbosity >= 0) {
+		cout << "Creating atlas '" << atlas_path << "'";
+		if(verbosity >= 1) {
+			cout << " from '" << input_paths.front() << "'";
+			size_t count = 1;
+			for(pc_iter it = ++input_paths.begin(); it != input_paths.end(); ++it) {
+				cout << ", `" << *it << "'";
+				count++;
+				if(count >= 3 && verbosity < 3) {
+					cout << ", [...]";
+					break;
+				}
+			}
+		}
+		cout << "." << endl;
+	}
+	image_container_t imgs;
+	if(input_paths.size() > 1) {
+		imgs.reserve( input_paths.size() );
+	}
+
+	options::verbosity = std::min(0, verbosity);
+	read_images( input_paths, imgs );
+	options::verbosity = verbosity;
+	assert( input_paths.size() == imgs.size() );
+
+	pc_iter path_it = input_paths.begin();
+	for(image_iterator_t img_it = imgs.begin(); img_it != imgs.end(); ++img_it, ++path_it) {
+		A.addImage( path_it->basename().replaceExtension("tex", true), *img_it );
+	}
+
+	A.dump(atlas_path, verbosity);
+}
+
+template<typename Container>
+static void analyze_atlas(const VirtualPath& atlas_path, Container input_paths, const VirtualPath& output_dir) {
+	(void)input_paths;
+
+	Atlas A;
+
+	A.setDecompressor( ImOp::ktexDecompressor(false) );
+
+	typedef typename Container::const_iterator pc_iter;
+	typedef std::vector<Magick::Image> image_container_t;
+	typedef image_container_t::iterator image_iterator_t;
+
+	const int verbosity = options::verbosity;
+
+	if(verbosity >= 0) {
+		cout << "Decomposing atlas '" << atlas_path << "'";
+		cout << "..." << endl;
+	}
+
+	A.load(atlas_path, verbosity);
+
+	//A.analyze();
+
+	if(verbosity >= 1) {
+		cout << "Saving atlas images..." << endl;
+	}
+
+	A.saveImages( output_dir, true, verbosity );
+}
+
+///
 
 template<typename OutputIterator>
 static void split(OutputIterator it, const string& str, const std::string& sep) {
@@ -316,23 +260,37 @@ static void split(OutputIterator it, const string& str, const std::string& sep) 
 	*it++ = str.substr(start);
 }
 
-/*
- * Slurps the input image into a std::string, to get a uniform treatment for both regular files and stdin
- * input (since we need to check for KTEX's magical number before feeding the image to ImageMagick or otherwise).
- */
+///
+
 int main(int argc, char* argv[]) {
+	typedef list<VirtualPath> pathlist_t;
+	typedef pathlist_t::iterator path_iterator;
+
 	try {
 		initialize_application(argc, argv);
 
-		string input_path_str, output_path_str;
-		KTEX::File::Header configured_header = parse_commandline_options(argc, argv, input_path_str, output_path_str);
+		std::list<VirtualPath> input_paths;
+		VirtualPath potential_output_path;
 
-		typedef list<path_t> pathlist_t;
-		pathlist_t input_paths;
-		split( std::back_inserter(input_paths), input_path_str, ",");
-		if(input_paths.empty()) {
-			cerr << "error: Empty list of input files provided." << endl;
-			exit(1);
+		KTEX::File::Header configured_header = parse_commandline_options(argc, argv, input_paths, potential_output_path);
+
+		Maybe<VirtualPath> output_path = Just(potential_output_path);
+
+		if(options::atlas_path != nil) {
+			if(potential_output_path.hasExtension() && !potential_output_path.hasExtension("tex") && !potential_output_path.isDirectory()) {
+				input_paths.push_back( potential_output_path );
+				output_path = nil;
+			}
+		}
+		else if(input_paths.empty()){
+			input_paths.push_back( potential_output_path );
+			output_path = Just(VirtualPath("."));
+		}
+
+		if(input_paths.size() == 1) {
+			std::string full_path_str = input_paths.front();
+			input_paths.clear();
+			split( std::back_inserter(input_paths), full_path_str, ",");
 		}
 
 		for(pathlist_t::iterator it = input_paths.begin(); it != input_paths.end(); ++it) {
@@ -341,34 +299,58 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		Path output_path = output_path_str;
+		bool output_has_extension = true;
+		if(options::atlas_path == nil && output_path != nil) {
+			process_paths(input_paths.front(), output_path.ref());
+		}
 
-		bool output_has_extension = process_paths(input_paths.front(), output_path);
+		const bool is_tex_input = input_paths.empty() || input_paths.front().hasExtension("tex");
 
-		//assert( input_path != "-" );
+		if(output_path == nil && is_tex_input) {
+			throw KToolsError("No output path for KTEX decompression.");
+		}
 
+		if(is_tex_input) {
+			if(options::atlas_path == nil) {
+				std::istream* in = input_paths.front().open_in(std::ifstream::binary);
 
-		std::istream* in = input_paths.front().openIn(std::ifstream::binary);
-		if(KTech::KTEX::File::isKTEXFile(*in)) {
-			if(input_paths.size() > 1) {
-				throw Error("Multiple input files should only be given on TEX output.");
+				if(!KTech::KTEX::File::isKTEXFile(*in)) {
+					throw KToolsError(std::string("Input file '") + input_paths.front() + "' has '.tex' extension, but its binary contents do not match a KTEX file.");
+				}
+
+				if(input_paths.size() > 1) {
+					throw KToolsError("Multiple input files should only be given on TEX output.");
+				}
+				if(!output_has_extension) {
+					output_path.ref() += ".";
+					output_path.ref() += DEFAULT_OUTPUT_EXTENSION;
+				}
+
+				convert_from_KTEX(*in, input_paths.front(), output_path.ref());
+				delete in;
 			}
-			if(!output_has_extension) {
-				output_path += ".";
-				output_path += DEFAULT_OUTPUT_EXTENSION;
+			else {
+				if(!output_path.ref().mkdir()) {
+					throw SysError(std::string("failed to create '") + output_path.ref() + "' directory: ");
+				}
+				analyze_atlas(options::atlas_path.ref(), input_paths, output_path.ref());
 			}
-
-			convert_from_KTEX(*in, input_paths.front(), output_path);
-			delete in;
 		}
 		else {
-			delete in;
-
-			if(!output_has_extension) {
-				output_path += ".tex";
+			if(input_paths.empty()) {
+				throw Error("empty list of input files provided.");
 			}
 
-			convert_to_KTEX(input_paths, output_path, configured_header);
+			if(options::atlas_path == nil) {
+				if(!output_has_extension) {
+					output_path.ref() += ".tex";
+				}
+
+				convert_to_KTEX(input_paths, output_path.ref(), configured_header);
+			}
+			else {
+				synthesize_atlas(options::atlas_path.ref(), input_paths, configured_header);
+			}
 		}
 	}
 	catch(std::exception& e) {

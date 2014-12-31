@@ -12,12 +12,12 @@ using namespace pugi;
 /***********************************************************************/
 
 // This is the scale applied by the scml compiler in the mod tools.
-//static const computations_float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
+//static const float_type MODTOOLS_SCALE = KBuild::MODTOOLS_SCALE;
 
-static const computations_float_type TIME_SCALE = 1;
+static const float_type TIME_SCALE = 1;
 
 // Tolerance for the square distance of matrices.
-static const computations_float_type MATRIX_EPS = 0.5;
+static const float_type MATRIX_EPS = 0.5;
 
 /***********************************************************************/
 
@@ -45,8 +45,8 @@ inline int tomilli(double x) {
 
 namespace {
 	struct BuildSymbolFrameMetadata {
-		computations_float_type pivot_x;
-		computations_float_type pivot_y;
+		float_type pivot_x;
+		float_type pivot_y;
 
 		//uint32_t framenum;
 		//uint32_t duration;
@@ -105,7 +105,7 @@ namespace {
 
 	struct AnimationExporterState : public GenericState {
 		uint32_t key_id;
-		computations_float_type running_length;
+		float_type running_length;
 		uint32_t timeline_id;
 
 		AnimationExporterState() : key_id(0), running_length(0), timeline_id(0) {}
@@ -117,10 +117,10 @@ namespace {
 
 		uint32_t object_ref_id;
 		uint32_t z_index;
-		computations_float_type last_sort_order;
+		float_type last_sort_order;
 
 		AnimationFrameExporterState(uint32_t _animation_frame_id, int max_z_index) : animation_frame_id(_animation_frame_id), object_ref_id(0), z_index(max_z_index) {
-			last_sort_order = -numeric_limits<computations_float_type>::infinity();
+			last_sort_order = -numeric_limits<float_type>::infinity();
 		}
 	};
 
@@ -404,8 +404,6 @@ static void exportBuildSymbol(xml_node spriter_data, BuildExporterState& s, Buil
 }
 
 static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s, BuildSymbolFrameMetadata& framemeta, const KBuild::Symbol::Frame& frame) {
-	typedef KBuild::float_type float_type;
-
 	const uint32_t file_id = s.file_id++;
 
 	xml_node file = folder.append_child("file");
@@ -421,8 +419,8 @@ static void exportBuildSymbolFrame(xml_node folder, BuildSymbolExporterState& s,
 	w = bbox.int_w();
 	h = bbox.int_h();
 
-	computations_float_type pivot_x = 0.5 - x/w;
-	computations_float_type pivot_y = 0.5 + y/h;
+	float_type pivot_x = 0.5 - x/w;
+	float_type pivot_y = 0.5 + y/h;
 
 	framemeta.pivot_x = pivot_x;
 	framemeta.pivot_y = pivot_y;
@@ -506,7 +504,7 @@ static void exportAnimation(xml_node entity, AnimationBankExporterState& s, cons
 }
 static void exportAnimationFrame(xml_node mainline, AnimationExporterState& s, AnimationMetadata& animmeta, const BuildMetadata& bmeta, const KAnim::Frame& frame) {
 	const uint32_t key_id = s.key_id++;
-	const computations_float_type running_length = s.running_length;
+	const float_type running_length = s.running_length;
 	s.running_length += frame.getDuration();
 	uint32_t start_time = tomilli(running_length);
 
@@ -547,7 +545,7 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 
 	// Sanity checking.
 	{
-		computations_float_type sort_order = elem.getAnimSortOrder();
+		float_type sort_order = elem.getAnimSortOrder();
 		if(sort_order < s.last_sort_order) {
 			throw logic_error("Program logic state invariant breached: anim sort order progression is not monotone.");
 		}
@@ -582,7 +580,7 @@ static void exportAnimationFrameElement(xml_node mainline_key, AnimationFrameExp
 
 
 struct matrix_components {
-	typedef computations_float_type float_type;
+	
 
 	float_type scale_x, scale_y;
 	float_type angle;
@@ -608,8 +606,8 @@ static typename MatrixTypeA::value_type matrix_distsq(const MatrixTypeA& A, cons
 	return a*a + b*b + c*c + d*d;
 }
 
-static SquareMatrix<2, computations_float_type> rotationMatrix(computations_float_type theta) {
-	typedef computations_float_type f_t;
+static SquareMatrix<2, float_type> rotationMatrix(float_type theta) {
+	typedef float_type f_t;
 	f_t c = cos(theta);
 	f_t s = sin(theta);
 
@@ -622,8 +620,8 @@ static SquareMatrix<2, computations_float_type> rotationMatrix(computations_floa
 	return M;
 }
 
-static SquareMatrix<2, computations_float_type> scaleMatrix(computations_float_type x, computations_float_type y) {
-	typedef computations_float_type f_t;
+static SquareMatrix<2, float_type> scaleMatrix(float_type x, float_type y) {
+	typedef float_type f_t;
 	
 	SquareMatrix<2, f_t> M;
 	M[0][0] = x;
@@ -649,9 +647,9 @@ static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_
 
 	/*
 	// Angle according to the scale_x entries.
-	const computations_float_type angle_x = atan2(M[1][0], M[0][0]);
+	const float_type angle_x = atan2(M[1][0], M[0][0]);
 	// Angle according to the scale_y entries.
-	const computations_float_type angle_y = atan2(-M[0][1], M[1][1]);
+	const float_type angle_y = atan2(-M[0][1], M[1][1]);
 	*/
 
 	ret.angle = atan2(M[1][0]/ret.scale_x, M[1][1]/ret.scale_y);
@@ -731,7 +729,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	 *
 	 * Only used when the --check-animation-fidelity option is given.
 	 */
-	Maybe<computations_float_type> symbol_sqbadness;
+	Maybe<float_type> symbol_sqbadness;
 
 	int key_id = 0;
 	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
@@ -753,14 +751,14 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 
 		if(options::check_animation_fidelity) {
-			computations_float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
+			float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
 			if(mdsq > MATRIX_EPS && (symbol_sqbadness == nil || symbol_sqbadness.value() < mdsq)) {
 				symbol_sqbadness = Just(mdsq);
 			}
 		}
 
 
-		computations_float_type angle = geo.angle;
+		float_type angle = geo.angle;
 		if(angle < 0) {
 			angle += 2*M_PI;
 		}

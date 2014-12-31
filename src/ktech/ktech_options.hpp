@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTECH_OPTIONS_HPP
 
 #include "ktech_common.hpp"
+#include "file_abstraction.hpp"
 
 namespace KTech {
 	namespace options {
@@ -42,6 +43,8 @@ namespace KTech {
 		extern bool force_square;
 		extern bool extend;
 		extern bool extend_left;
+
+		extern Maybe<VirtualPath> atlas_path;
 	}
 }
 

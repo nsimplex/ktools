@@ -42,7 +42,7 @@ namespace Krane {
 
 	public:
 		// For computations and such, the types defined by the binary data are inflexible.
-		typedef computations_float_type float_type;
+		
 
 		static const uint8_t FACING_RIGHT = 1;
 		static const uint8_t FACING_UP = 2;

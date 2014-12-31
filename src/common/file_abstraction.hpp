@@ -5,6 +5,54 @@
 #include <fstream>
 
 namespace KTools {
+	using std::ios_base;
+
+	class VirtualPath;
+
+	class VirtualDirectory : public Compat::Path {
+		friend class VirtualPath;
+	public:
+		enum Type {
+			REGULAR,
+			ZIP,
+			STANDARD_IO,
+			XML_ATLAS,
+
+			UNKNOWN
+		};
+
+		const Type type;
+
+
+		typedef std::istream* (*in_handler_t)(const VirtualDirectory&, const Compat::Path& subpath, ios_base::openmode);
+		typedef std::ostream* (*out_handler_t)(const VirtualDirectory&, const Compat::Path& subpath, ios_base::openmode);
+
+		typedef std::pair<in_handler_t, out_handler_t> handler_pair_t;
+
+		handler_pair_t getHandlers() const;
+
+	private:
+		VirtualDirectory(const Compat::Path& p, Type t) : Compat::Path(p), type(t) {}
+		VirtualDirectory(const VirtualDirectory& d) : Compat::Path(d), type(d.type) {}
+
+	public:
+		virtual ~VirtualDirectory() {}
+
+		Type getType() const {
+			return type;
+		}
+
+		std::istream* open_in(const Compat::Path& subpath, ios_base::openmode mode = ios_base::openmode()) const {
+			mode |= ios_base::in;
+			return getHandlers().first(*this, subpath, mode);
+		}
+
+		std::ostream* open_out(const Compat::Path& subpath, ios_base::openmode mode = ios_base::openmode()) const {
+			mode |= ios_base::out;
+			return getHandlers().second(*this, subpath, mode);
+		}
+	};
+
 	class VirtualPath : public Compat::Path {
 		typedef Compat::Path super;
 
@@ -12,27 +60,19 @@ namespace KTools {
 		typedef Compat::Path Path;
 
 	private:
-		std::istream* basic_openIn(std::ios_base::openmode mode) const {
-			return new std::ifstream(c_str(), mode);
-		}
+		VirtualDirectory getVirtualDirectory(Compat::Path& subpath) const;
 
-		std::ostream* basic_openOut(std::ios_base::openmode mode = std::ios_base::out) const {
-			return new std::ofstream(c_str(), mode);
+		VirtualDirectory getVirtualDirectory() const {
+			Compat::Path dummy;
+			return getVirtualDirectory(dummy);
 		}
 
 #if defined(HAVE_LIBZIP)
-		/*
-		 * Returns the position of the start of the zip entry in the path, or
-		 * string::npos if there is none.
-		 */
-		size_t getZipEntryPathPosition() const;
-
-		bool zipEntryExists(size_t entry_pathpos) const;
-
-		std::istream* zip_openIn(size_t entry_pathpos) const;
+		static bool zipEntryExists(const VirtualDirectory& zippath, const Compat::UnixPath& entrypath);
 #endif
 
 	public:
+		VirtualPath(const char* str) : Path(str) {}
 		VirtualPath(const std::string& str) : Path(str) {}
 		VirtualPath(const Path& p) : Path(p) {}
 		VirtualPath(const VirtualPath& p) : Path(p) {}
@@ -41,7 +81,7 @@ namespace KTools {
 
 		bool isZipEntry() const {
 #if defined(HAVE_LIBZIP)
-			return getZipEntryPathPosition() != npos;
+			return getVirtualDirectory().getType() == VirtualDirectory::ZIP;
 #else
 			return false;
 #endif
@@ -57,9 +97,10 @@ namespace KTools {
 
 		bool exists() const {
 #if defined(HAVE_LIBZIP)
-			size_t entry_pathpos = getZipEntryPathPosition();
-			if(entry_pathpos != npos) {
-				return zipEntryExists(entry_pathpos);
+			Compat::Path subpath;
+			const VirtualDirectory& zippath = getVirtualDirectory(subpath);
+			if(zippath.getType() == VirtualDirectory::ZIP) {
+				return zipEntryExists(zippath, Compat::UnixPath(subpath));
 			}
 			else {
 #endif
@@ -70,27 +111,17 @@ namespace KTools {
 		}
 
 		// The pointer should later be deallocated by the user.
-		std::istream* openIn(std::ios_base::openmode mode = std::ios_base::openmode()) const {
-#if defined(HAVE_LIBZIP)
-			size_t entry_pathpos = getZipEntryPathPosition();
-			if(entry_pathpos != npos) {
-				return zip_openIn(entry_pathpos);
-			}
-			else {
-#endif
-				std::istream* ret = basic_openIn(mode | std::ios_base::in);
-				check_stream_validity(*ret, *this);
-				return ret;
-#if defined(HAVE_LIBZIP)
-			}
-#endif
+		std::istream* open_in(std::ios_base::openmode mode = std::ios_base::openmode()) const {
+			Compat::Path subpath;
+			VirtualDirectory d = getVirtualDirectory(subpath);
+			return d.open_in(subpath, mode);
 		}
 
 		// The pointer should later be deallocated by the user.
-		std::ostream* openOut(std::ios_base::openmode mode = std::ios_base::openmode()) const {
-			std::ostream* ret = basic_openOut(mode | std::ios_base::out);
-			check_stream_validity(*ret, *this);
-			return ret;
+		std::ostream* open_out(std::ios_base::openmode mode = std::ios_base::openmode()) const {
+			Compat::Path subpath;
+			VirtualDirectory d = getVirtualDirectory(subpath);
+			return d.open_out(subpath, mode);
 		}
 	};
 }

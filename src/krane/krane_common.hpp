@@ -30,8 +30,6 @@ namespace Krane {
 
 	typedef std::map<hash_t, std::string> hashtable_t;
 
-	typedef double computations_float_type;
-
 	inline hash_t strhash(const std::string& str) {
 		const size_t len = str.length();
 		signed_hash_t h = 0;
