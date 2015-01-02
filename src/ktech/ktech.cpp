@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
 
 		bool output_has_extension = true;
 		if(options::atlas_path == nil && output_path != nil) {
-			process_paths(input_paths.front(), output_path.ref());
+			output_has_extension = process_paths(input_paths.front(), output_path.ref());
 		}
 
 		const bool is_tex_input = input_paths.empty() || input_paths.front().hasExtension("tex");
