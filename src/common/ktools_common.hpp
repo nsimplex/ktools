@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef KTOOLS_BASIC_HPP
 #define KTOOLS_BASIC_HPP
 
+#ifdef NDEBUG
+#	undef NDEBUG
+#endif
 
 #ifdef _MSC_VER
 // Mostly to avoid warnings related to ImageMagick classes.

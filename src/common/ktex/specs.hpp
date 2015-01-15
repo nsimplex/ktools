@@ -29,9 +29,6 @@ namespace KTools {
 			static const size_t DATASIZE = 4;
 			static const size_t TOTALSIZE = 8;
 
-			// TODO: remove it!
-			// static std::vector<HeaderFieldSpec> FieldSpecs;
-
 			static const class FieldSpecsMap_t {
 				typedef std::map<std::string, HeaderFieldSpec> map_t;
 				map_t M;

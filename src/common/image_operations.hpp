@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KTOOLS_IMAGE_OPERATIONS_HPP
 
 #include "ktools_common.hpp"
+#include "compat.hpp"
 #include <functional>
 
 namespace KTools {
@@ -277,9 +278,16 @@ namespace ImOp {
 	};
 
 	class write : public unary_operation_t {
-		std::string path;
+		Compat::Path path;
 	public:
-		write(const std::string& p) : path(p) {}
+		static void prepare(const Compat::Path& p, Magick::Image& img) {
+			if(p.hasExtension("png")) {
+				img.magick("png");
+				img.defineValue("png", "color-type", "6");
+			}
+		}
+
+		write(const Compat::Path& p) : path(p) {}
 		write(const write& w) {*this = w;}
 
 		write& operator=(const write& w) {
@@ -288,14 +296,17 @@ namespace ImOp {
 		}
 
 		virtual void call(Magick::Image& img) const {
+			prepare(path, img);
 			img.write(path);
 		}
 	};
 
 	template<typename Container>
-	class SequenceWriter : public operation_t<const std::string&> {
+	class SequenceWriter : public operation_t<const Compat::Path&> {
 		Container* c;
 	public:
+		typedef typename Container::iterator img_iterator;
+
 		SequenceWriter(Container& _c) : c(&_c) {}
 		SequenceWriter(Container* _c) : c(_c) {}
 
@@ -304,7 +315,10 @@ namespace ImOp {
 			return *this;
 		}
 
-		virtual void call(const std::string& pathSpec) const {
+		virtual void call(const Compat::Path& pathSpec) const {
+			for(img_iterator it = c->begin(); it != c->end(); ++it) {
+				write::prepare(pathSpec, *it);
+			}
 			Magick::writeImages( c->begin(), c->end(), pathSpec, false );
 		}
 	};

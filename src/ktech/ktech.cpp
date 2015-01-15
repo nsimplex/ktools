@@ -133,7 +133,7 @@ static void convert_from_KTEX(std::istream& in, const string& input_path, const 
 		std::deque<Magick::Image> imgs;
 
 		ImOp::ktexDecompressor(std::min(options::verbosity, 0), multiple_mipmaps).decompress( tex, imgs );
-		
+
 		if(verbosity >= 0) {
 			if(multiple_mipmaps) {
 				const size_t fmt_end = fmt_pos + fmt_string.length();
@@ -144,7 +144,7 @@ static void convert_from_KTEX(std::istream& in, const string& input_path, const 
 				
 				char buf[3];
 
-				sprintf(buf, fmt_string.c_str(), 0);
+				snprintf(buf, sizeof(buf), fmt_string.c_str(), 0);
 				std::cout << "Converting RGBA bitmap and saving into `" << out_head << buf << out_tail << "'";
 				for(int i = 1; i < (int)mipmap_count; i++) {
 					sprintf(buf, fmt_string.c_str(), i);
@@ -222,7 +222,7 @@ static void analyze_atlas(const VirtualPath& atlas_path, Container input_paths, 
 
 	Atlas A;
 
-	A.setDecompressor( ImOp::ktexDecompressor(false) );
+	A.setDecompressor( ImOp::ktexDecompressor() );
 
 	typedef typename Container::const_iterator pc_iter;
 	typedef std::vector<Magick::Image> image_container_t;

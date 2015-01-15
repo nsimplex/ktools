@@ -401,12 +401,15 @@ namespace KTools {
 		}
 
 		void addImage(const Compat::UnixPath& id, Magick::Image img) {
+			size_t i = 1;
 			for(sheet_iterator sheet_it = sheets.begin(); sheet_it != sheets.end(); ++sheet_it) {
 				if(sheet_it->addImage(id, img)) {
 					return;
 				}
+				i++;
 			}
-			assert( pushSheet().addImage(id, img) );
+			const bool status = pushSheet().addImage(id, img);
+			assert( status );
 		}
 
 		void synthesize() const {

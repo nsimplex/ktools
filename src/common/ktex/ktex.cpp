@@ -24,6 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace KTools;
 using namespace KTools::KTEX;
 
+using std::cout;
+using std::cerr;
+using std::endl;
+
 bool KTools::KTEX::File::isKTEXFile(std::istream& in) {
 	try {
 		return BinIOHelper::getMagicNumber(in) == HeaderSpecs::MAGIC_NUMBER;
@@ -104,6 +108,8 @@ void KTools::KTEX::File::Header::print(std::ostream& out, int verbosity, size_t 
 }
 
 std::ostream& KTools::KTEX::File::Header::dump(std::ostream& out) const {
+	BinIOHelper::sanitizeStream(out);
+
 	BinIOHelper::raw_write_integer(out, MAGIC_NUMBER);
 	io.write_integer(out, data);
 	return out;
@@ -126,6 +132,8 @@ static void convertFromPreCaves(KTools::KTEX::File::Header& h) {
 
 std::istream& KTools::KTEX::File::Header::load(std::istream& in) {
 	typedef BitOp::BitMask<8*sizeof(data_t) - 18, 18, data_t> precavesMask;
+
+	BinIOHelper::sanitizeStream(in);
 
 	reset();
 
@@ -235,6 +243,8 @@ void KTools::KTEX::File::print(std::ostream& out, int verbosity, size_t indentat
 }
 
 std::ostream& KTools::KTEX::File::dump(std::ostream& out, int verbosity) const {
+	BinIOHelper::sanitizeStream(out);
+
 	size_t mipmap_count = header.getField("mipmap_count");
 
 	if(verbosity >= 1) {
@@ -280,6 +290,8 @@ std::ostream& KTools::KTEX::File::dump(std::ostream& out, int verbosity) const {
 }
 
 std::istream& KTools::KTEX::File::load(std::istream& in, int verbosity, bool info_only) {
+	BinIOHelper::sanitizeStream(in);
+
 	if(verbosity >= 1) {
 		std::cout << "Loading KTEX header..." << std::endl;
 	}

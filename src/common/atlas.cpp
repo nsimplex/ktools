@@ -48,9 +48,9 @@ namespace {
 
 	template<int (*f)(int)>
 	static std::string& mapstr(std::string& s) {
-		size_t l = s.length();
+		const size_t l = s.length();
 		for(size_t i = 0; i < l; i++) {
-			s[i] = (*f)(s[i]);
+			s[i] = (char)(*f)(s[i]);
 		}
 		return s;
 	}
@@ -148,7 +148,7 @@ namespace KTools {
 				KTEX::File tex;
 
 				VirtualPath tex_path = basedir/std::string(texture_filename);
-				std::istream* in = tex_path.open_in();
+				std::istream* in = tex_path.open_in(std::ifstream::binary);
 				tex.load( *in, std::min(0, verbosity) );
 				delete in;
 
@@ -232,7 +232,7 @@ namespace KTools {
 				parent().getCompressor()(tex, final_image);
 
 				VirtualPath tex_path = basedir/texture_filename;
-				std::ostream* out = tex_path.open_out();
+				std::ostream* out = tex_path.open_out(std::ofstream::binary);
 				tex.dump( *out, std::min(0, verbosity) );
 				delete out;
 			}
@@ -291,9 +291,15 @@ namespace KTools {
 				throw KToolsError("single Atlas tag expected.");
 			}
 
+			bool found_any_texture = false;
 			for(xml_node child = ichild(atlas_node, "Texture"); child; child = isibling(child, "Texture")) {
 				sheet_t& sheet = pushSheet();
 				sheet.load(child, basedir, verbosity);
+				found_any_texture = true;
+			}
+
+			if(!found_any_texture) {
+				std::cerr << "WARNING: the atlas '" << getPath() << "' does not specify any texture files. No output generated." << std::endl;
 			}
 
 			if(verbosity >= 0) {
