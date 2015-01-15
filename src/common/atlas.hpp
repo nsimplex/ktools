@@ -401,15 +401,19 @@ namespace KTools {
 		}
 
 		void addImage(const Compat::UnixPath& id, Magick::Image img) {
-			size_t i = 1;
 			for(sheet_iterator sheet_it = sheets.begin(); sheet_it != sheets.end(); ++sheet_it) {
 				if(sheet_it->addImage(id, img)) {
 					return;
 				}
-				i++;
 			}
-			const bool status = pushSheet().addImage(id, img);
-			assert( status );
+			if(!pushSheet().addImage(id, img)) {
+				throw KToolsError( fmt("An atlas texture file has a maximum size of %ux%u. Impossible to fit image '%s' of size %ux%u.",
+							(unsigned)Sheet::MAX_WIDTH,
+							(unsigned)Sheet::MAX_HEIGHT,
+							id.c_str(),
+							(unsigned)img.columns(),
+							(unsigned)img.rows()) );
+			}
 		}
 
 		void synthesize() const {
