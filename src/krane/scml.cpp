@@ -594,22 +594,29 @@ struct matrix_components {
 	{}
 };
 
+// sup entry-wise norm
 template<typename MatrixTypeA, typename MatrixTypeB>
-static typename MatrixTypeA::value_type matrix_distsq(const MatrixTypeA& A, const MatrixTypeB& B) {
+static typename MatrixTypeA::value_type matrix_dist(const MatrixTypeA& A, const MatrixTypeB& B) {
 	typedef typename MatrixTypeA::value_type f_t;
 
-	const f_t a = A[0][0] - B[0][0];
-	const f_t b = A[0][1] - B[0][1];
-	const f_t c = A[1][0] - B[1][0];
-	const f_t d = A[1][1] - B[1][1];
+	f_t max_delta = 0;
+	for(int i = 0; i < 2; i++) {
+		for(int j = 0; j < 2; j++) {
+			const f_t delta = fabs(A[i][j] - B[i][j]);
+			if(delta > max_delta) {
+				max_delta = delta;
+			}
+		}
+	}
 
-	return a*a + b*b + c*c + d*d;
+	return max_delta;
 }
 
 static SquareMatrix<2, float_type> rotationMatrix(float_type theta) {
 	typedef float_type f_t;
-	f_t c = cos(theta);
-	f_t s = sin(theta);
+
+	const f_t c = cos(theta);
+	const f_t s = sin(theta);
 
 	SquareMatrix<2, f_t> M = nil;
 	M[0][0] = c;
@@ -624,6 +631,8 @@ static SquareMatrix<2, float_type> scaleMatrix(float_type x, float_type y) {
 	typedef float_type f_t;
 	
 	SquareMatrix<2, f_t> M;
+	assert(M[0][1] == 0 && M[1][0] == 0);
+
 	M[0][0] = x;
 	M[1][1] = y;
 
@@ -633,66 +642,43 @@ static SquareMatrix<2, float_type> scaleMatrix(float_type x, float_type y) {
 /*
  * Decomposes (approximately if this is not possible exactly) a matrix into xy scalings and a rotation angle in radians.
  *
- * In Spriter, scaling is applied before rotation.
- *
- * To impose uniqueness, scale_x never changes sign.
+ * In Spriter, scaling is applied before rotation. HOWEVER, in Klei's native
+ * format, rotation is applied before scaling. Crazy, right?
  *
  * The result is stored in ret, and last holds the last batch of results
  * (the ones relevant for further computation, anyway)
  */
 template<typename MatrixType>
 static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_components& last, bool& is_first) {
-	ret.scale_x = sqrt(M[0][0]*M[0][0] + M[1][0]*M[1][0]);
-	ret.scale_y = sqrt(M[0][1]*M[0][1] + M[1][1]*M[1][1]);
+	static const float_type eps = 1e-5;
 
-	/*
-	// Angle according to the scale_x entries.
-	const float_type angle_x = atan2(M[1][0], M[0][0]);
-	// Angle according to the scale_y entries.
-	const float_type angle_y = atan2(-M[0][1], M[1][1]);
-	*/
+	ret.scale_x = sqrt(M[0][0]*M[0][0] + M[0][1]*M[0][1]);
+	ret.scale_y = sqrt(M[1][0]*M[1][0] + M[1][1]*M[1][1]);
 
-	ret.angle = atan2(M[1][0]/ret.scale_x, M[1][1]/ret.scale_y);
+	const float_type det = M[0][0]*M[1][1] - M[1][0]*M[0][1];
+	if(det < 0) {
+		if(is_first || last.scale_x <= last.scale_y) {
+			ret.scale_x = -ret.scale_x;
+			is_first = false;
+		}
+		else {
+			ret.scale_y = -ret.scale_y;
+		}
+	}
+
+	if(fabs(ret.scale_x) < eps || fabs(ret.scale_y) < eps) {
+		ret.angle = last.angle;
+	}
+	else {
+		using namespace std;
+		const float_type sin_approx = 0.5*( M[1][0]/ret.scale_y - M[0][1]/ret.scale_x );
+		const float_type cos_approx = 0.5*( M[0][0]/ret.scale_x + M[1][1]/ret.scale_y );
+		ret.angle = atan2(sin_approx, cos_approx);
+	}
 
 	ret.spin = (fabs(ret.angle - last.angle) <= M_PI ? 1 : -1);
 	if(ret.angle < last.angle) {
 		ret.spin = -ret.spin;
-	}
-
-
-	if(fabs(M[1][1]) < 1e-3) {
-		if(last.scale_y < 0) {
-			ret.scale_y = -ret.scale_y;
-		}
-	}
-	else {
-		if(M[1][1] < 0) {
-			if(fabs(ret.angle) < M_PI/2) {
-				ret.scale_y = -ret.scale_y;
-			}
-		}
-		else {
-			if(fabs(ret.angle) > M_PI/2) {
-				ret.scale_y = -ret.scale_y;
-			}
-		}
-	}
-
-	if(is_first) {
-		if(ret.angle > 0) {
-			if(M[0][1]*ret.scale_y > 0) {
-				ret.scale_x = -ret.scale_x;
-			}
-		}
-		else if(M[0][1]*ret.scale_y < 0) {
-			ret.scale_x = -ret.scale_x;
-		}
-		is_first = false;
-	}
-	else {
-		if(last.scale_x < 0) {
-			ret.scale_x = -ret.scale_x;
-		}
 	}
 
 	last.scale_x = ret.scale_x;
@@ -718,9 +704,10 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	 *
 	 * Used to preserve continuity and minimize oscillations.
 	 *
-	 * It is edited internally by the decomposition function, nothing should be set to it.
+	 * It is edited internally by the decomposition function.
 	 */
 	matrix_components last_result;
+	last_result.angle = 0;
 
 	bool is_first = true;
 
@@ -729,7 +716,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 	 *
 	 * Only used when the --check-animation-fidelity option is given.
 	 */
-	Maybe<float_type> symbol_sqbadness;
+	Maybe<float_type> symbol_badness;
 
 	int key_id = 0;
 	for(AnimationSymbolMetadata::const_iterator animsymframeiter = animsymmeta.begin(); animsymframeiter != animsymmeta.end(); ++animsymframeiter) {
@@ -751,9 +738,9 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 
 
 		if(options::check_animation_fidelity) {
-			float_type mdsq = matrix_distsq(M, rotationMatrix(geo.angle)*scaleMatrix(geo.scale_x, geo.scale_y));
-			if(mdsq > MATRIX_EPS && (symbol_sqbadness == nil || symbol_sqbadness.value() < mdsq)) {
-				symbol_sqbadness = Just(mdsq);
+			float_type md = matrix_dist(M, scaleMatrix(geo.scale_x, geo.scale_y)*rotationMatrix(geo.angle));
+			if(md > MATRIX_EPS && (symbol_badness == nil || symbol_badness.value() < md)) {
+				symbol_badness = Just(md);
 			}
 		}
 
@@ -779,7 +766,7 @@ static void exportAnimationSymbolTimeline(const BuildSymbolMetadata& symmeta, co
 		object.append_attribute("angle") = angle;
 	}
 
-	if(symbol_sqbadness != nil) {
-		cerr << "WARNING: the geometry of animation symbol \"" << animsymmeta.getName() << "\" in animation \"" << animsymmeta.getAnimationName() << "\" is not fully representable in Spriter. Precision lost, expect ugly result. (max matrix distance: " << sqrt(symbol_sqbadness.value()) << ")" << endl;
+	if(symbol_badness != nil) {
+		cerr << "WARNING: the geometry of animation symbol \"" << animsymmeta.getName() << "\" in animation \"" << animsymmeta.getAnimationName() << "\" is not fully representable in Spriter. Expect lower animation fidelity. (max matrix distance: " << symbol_badness.value() << ")" << endl;
 	}
 }
