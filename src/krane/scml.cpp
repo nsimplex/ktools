@@ -642,8 +642,7 @@ static SquareMatrix<2, float_type> scaleMatrix(float_type x, float_type y) {
 /*
  * Decomposes (approximately if this is not possible exactly) a matrix into xy scalings and a rotation angle in radians.
  *
- * In Spriter, scaling is applied before rotation. HOWEVER, in Klei's native
- * format, rotation is applied before scaling. Crazy, right?
+ * In Spriter, rotation is applied before scaling. Counter-intuitive, huh?
  *
  * The result is stored in ret, and last holds the last batch of results
  * (the ones relevant for further computation, anyway)
