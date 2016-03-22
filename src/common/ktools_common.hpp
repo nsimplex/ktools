@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Mostly to avoid warnings related to ImageMagick classes.
 // This is why the pragma is done here, and not in compat/*.hpp.
 #	pragma warning( disable: 4251 )
+#	pragma warning( disable: 4275 )
 #endif
 
 

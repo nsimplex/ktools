@@ -32,6 +32,7 @@ include(CheckIncludeFiles)
 include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
+include(CheckSymbolExists)
 include(CheckTypeSize)
 include(CheckStructHasMember)
 
@@ -152,12 +153,10 @@ endif()
 #
 CHECK_TYPE_SIZE("long long" LONG_LONG)
 #
-set(CMAKE_EXTRA_INCLUDE_FILES "stdio.h")
-CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+CHECK_SYMBOL_EXISTS("snprintf" "stdio.h" HAVE_SNPRINTF)
 if(NOT HAVE_SNPRINTF)
-	CHECK_FUNCTION_EXISTS("_snprintf" HAVE__SNPRINTF)
+	CHECK_SYMBOL_EXISTS("_snprintf" "stdio.h" HAVE__SNPRINTF)
 endif()
-set(CMAKE_EXTRA_INCLUDE_FILES)
 #
 set(CMAKE_EXTRA_INCLUDE_FILES "sys/stat.h")
 CHECK_TYPE_SIZE("mode_t" MODE_T)
