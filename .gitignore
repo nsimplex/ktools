@@ -13,3 +13,5 @@ local/**
 
 *.tar.gz
 *.zip
+releases
+releases/*
