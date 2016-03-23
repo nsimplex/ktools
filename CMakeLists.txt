@@ -231,6 +231,14 @@ endif(MSVC)
 INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
 INSTALL(TARGETS krane RUNTIME DESTINATION bin)
 
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 #
 # Packing stuff
@@ -263,7 +271,7 @@ include(CPack)
 add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
 #add_custom_target(bindist COMMAND ${CMAKE_MAKE_PROGRAM} package)
 add_custom_target(distclean
-	COMMAND rm -rf CMakeCache.txt CPackConfig.cmake CPackSourceConfig.cmake
+	COMMAND rm -rf CMakeCache.txt CPackConfig.cmake CPackSourceConfig.cmake config.h
 	COMMAND -find . '\(' -name CMakeFiles -o -name cmake_install.cmake -o -name Makefile '\)' -exec rm -rf {} '\;'
 	COMMAND rm -rf build/*
 )
