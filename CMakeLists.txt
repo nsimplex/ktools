@@ -261,7 +261,7 @@ set(CPACK_SOURCE_IGNORE_FILES
 include(CPack)
 
 add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
-add_custom_target(bindist COMMAND ${CMAKE_MAKE_PROGRAM} package)
+#add_custom_target(bindist COMMAND ${CMAKE_MAKE_PROGRAM} package)
 add_custom_target(distclean
 	COMMAND rm -rf CMakeCache.txt CPackConfig.cmake CPackSourceConfig.cmake
 	COMMAND -find . '\(' -name CMakeFiles -o -name cmake_install.cmake -o -name Makefile '\)' -exec rm -rf {} '\;'

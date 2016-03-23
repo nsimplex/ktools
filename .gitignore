@@ -10,3 +10,6 @@ local/**
 *.a
 *.dll
 *.exe
+
+*.tar.gz
+*.zip
