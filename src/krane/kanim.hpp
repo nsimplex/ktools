@@ -314,9 +314,15 @@ namespace Krane {
 			A->getFullName(fullname);
 			iterator match = find(fullname);
 			if(match != end()) {
-				throw KToolsError("Duplicate anim '" + match->first + "' in bank '" + name + "'");
+				std::string msg = "Duplicate anim '" + match->first + "' in bank '" + name + "'" ;
+				// throw KToolsError(msg);
+				std::cerr << "Warning: " << msg << std::endl;
+				delete match->second;
+				match->second = A;
 			}
-			insert( std::make_pair(fullname, A) );
+			else {
+				insert( std::make_pair(fullname, A) );
+			}
 		}
 
 		void clear() {
