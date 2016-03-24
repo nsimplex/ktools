@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "krane_common.hpp"
 #include "binary_io_utils.hpp"
 #include "algebra.hpp"
+#include "krane_options.hpp"
 
 namespace Krane {
 	class GenericKAnimFile;
@@ -41,15 +42,32 @@ namespace Krane {
 		friend class KAnimFile;
 
 	public:
-		// For computations and such, the types defined by the binary data are inflexible.
-		
+		/*
+		 * List of facing constants.
+		 */
 
-		static const uint8_t FACING_RIGHT = 1;
-		static const uint8_t FACING_UP = 2;
-		static const uint8_t FACING_LEFT = 4;
-		static const uint8_t FACING_DOWN = 8;
+		/*
+		 * Primitive directions.
+		 */
+		static const uint8_t FACING_RIGHT = 1 << 0;
+		static const uint8_t FACING_UP =  1 << 1;
+		static const uint8_t FACING_LEFT = 1 << 2;
+		static const uint8_t FACING_DOWN = 1 << 3;
+		static const uint8_t FACING_UPRIGHT = 1 << 4;
+		static const uint8_t FACING_UPLEFT = 1 << 5;
+		static const uint8_t FACING_DOWNRIGHT = 1 << 6;
+		static const uint8_t FACING_DOWNLEFT = 1 << 7;
+
+		/*
+		 * Composite directions.
+		 */
 		static const uint8_t FACING_SIDE = FACING_LEFT | FACING_RIGHT;
-		static const uint8_t FACING_ANY = FACING_RIGHT | FACING_UP | FACING_LEFT | FACING_DOWN;
+		static const uint8_t FACING_UPSIDE = FACING_UPLEFT | FACING_UPRIGHT;
+		static const uint8_t FACING_DOWNSIDE = FACING_DOWNLEFT | FACING_DOWNRIGHT;
+		static const uint8_t FACING_45S = FACING_UPLEFT | FACING_UPRIGHT | FACING_DOWNLEFT | FACING_DOWNRIGHT;
+		static const uint8_t FACING_90S = FACING_UP | FACING_DOWN | FACING_LEFT | FACING_RIGHT;
+
+		static const uint8_t FACING_ANY = FACING_45S | FACING_90S;
 
 		class Frame : public NestedSerializer<KAnim> {
 			friend class KAnim;
@@ -234,6 +252,10 @@ namespace Krane {
 			bank_hash = strhash(s);
 		}
 
+		uint8_t getFacingByte() const {
+			return facing_byte;
+		}
+
 		uint32_t getFrameCount() const {
 			return countFrames();
 		}
@@ -312,13 +334,20 @@ namespace Krane {
 			}
 			std::string fullname;
 			A->getFullName(fullname);
+
+			if(options::verbosity >= 1) {
+				std::cout << "Adding anim '" << fullname << "' to bank '" << name << "'" << std::endl;
+			}
+
 			iterator match = find(fullname);
 			if(match != end()) {
 				std::string msg = "Duplicate anim '" + match->first + "' in bank '" + name + "'" ;
-				// throw KToolsError(msg);
+				throw KToolsError(msg);
+				/*
 				std::cerr << "Warning: " << msg << std::endl;
 				delete match->second;
 				match->second = A;
+				*/
 			}
 			else {
 				insert( std::make_pair(fullname, A) );
