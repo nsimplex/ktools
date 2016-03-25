@@ -649,7 +649,7 @@ static SquareMatrix<2, float_type> scaleMatrix(float_type x, float_type y) {
  */
 template<typename MatrixType>
 static void decomposeMatrix(const MatrixType& M, matrix_components& ret, matrix_components& last, bool& is_first) {
-	static const float_type eps = 1e-5;
+	static const float_type eps = 1e-3;
 
 	ret.scale_x = sqrt(M[0][0]*M[0][0] + M[0][1]*M[0][1]);
 	ret.scale_y = sqrt(M[1][0]*M[1][0] + M[1][1]*M[1][1]);
