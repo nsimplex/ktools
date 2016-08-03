@@ -3,24 +3,32 @@
 A set of cross-platform modding tools for the game [Don't Starve](http://www.dontstarvegame.com/), by [Klei Entertainment](http://kleientertainment.com/).
 
 
-**IMPORTANT**: In what follows, a code block starting with a '$' indicates something that should be typed in a terminal (cmd.exe, for Windows). The '$' and the space following it should not be typed.
+**IMPORTANT**: In what follows, a code block starting with a `$` indicates something that should be typed in a terminal (cmd.exe, for Windows). The `$` and the space following it should not be typed.
 
 
 ## ktech
-A bidirectional cross-platform converter between Klei Entertainment's TEX texture format and PNG.
+A bidirectional cross-platform converter between Klei Entertainment's **TEX** texture format and **PNG**.
 
-### Basic usage and examples
+### Basic usage
 ktech converts bidirectionally between Klei's TEX format (KTEX) and PNG. If the first argument given to ktech is a KTEX file, it will be converted to PNG, and conversely if the first argument is a PNG file it will be converted to KTEX. If the second argument it missing, it is taken to be the first argument with the extension replaced (but in the current directory). If the second argument is a directory, the same is done as in the missing argument case, but the resulting file is placed in this directory.
+
+### Examples
 
 To convert `atlas-0.tex` to `atlas-0.png`:
 ```
 $ ktech atlas-0.tex
 ```
+
+---
+
 To do the same, placing it in some_folder:
 ```
 $ ktech atlas-0.tex some_folder
 ```
-To convert some/path/to/a.png to mymod/modicon.tex:
+
+---
+
+To convert `some/path/to/a.png` to `mymod/modicon.tex`:
 ```
 $ ktech some/path/to/a.ong mymod/modicon.tex
 ```
@@ -187,11 +195,11 @@ $ sudo make install
 
 Open CMake, select the ktools directory as the source folder ("Where is the source code") and whichever directory you'd like as the build folder ("Where to build the binaries"). Click "Configure" and select a generator (typically either a version of Visual Studio of "MinGW Makefiles"). Leave "Use default native compilers" checked and click "Finish". If you with to customize some compilation option (which shouldn't be necessary) do so now, in the options presented in red after the configure step finishes. If any option was changed, click "Configure" again. Finally, click "Generate", which should place the project files in the build directory you selected.
 
-For MinGW, proceed as in the Linux/Mac case (i.e., simply run `make` in the build directory).
+For **MinGW**, proceed as in the Linux/Mac case (i.e., simply run `make` in the build directory).
 
-For Visual Studio, open the ALL_BUILD.vcxproj file, right click the 'ktools' solution on the left pane, click on "Configuration Manager..." and make sure to select "Release" as the active solution configuration. Then build the solution (which may be done by pressing "F7").
+For **Visual Studio**, open the ALL_BUILD.vcxproj file, right click the 'ktools' solution on the left pane, click on "Configuration Manager..." and make sure to select "Release" as the active solution configuration. Then build the solution (which may be done by pressing "F7").
 
 
 
 ## LICENSE
-See NOTICE.txt.
+See [NOTICE](https://github.com/nsimplex/ktools/blob/master/NOTICE.txt)
