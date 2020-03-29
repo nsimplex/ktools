@@ -399,7 +399,7 @@ namespace KTools {
 	}
 
 	template<typename T>
-	inline void inverseOf(const ProjectiveMatrix<2, T>& M) {
+	inline ProjectiveMatrix<2, T> inverseOf(const ProjectiveMatrix<2, T>& M) {
 		ProjectiveMatrix<2, T> N(M);
 		invert(N);
 		return N;
