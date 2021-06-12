@@ -22,7 +22,7 @@ $ ktech atlas-0.tex some_folder
 ```
 To convert some/path/to/a.png to mymod/modicon.tex:
 ```
-$ ktech some/path/to/a.ong mymod/modicon.tex
+$ ktech some/path/to/a.png mymod/modicon.tex
 ```
 
 ### Full usage
