@@ -164,12 +164,12 @@ namespace ImOp {
 			}
 
 			if(!options::no_premultiply) {
-				if(verbosity >= 1) {
+				if(options::verbosity >= 1) {
 					std::cout << "Premultiplying alpha..." << std::endl;
 				}
 				std::for_each( imgs.begin(), imgs.end(), ImOp::premultiplyAlpha() );
 			}
-			else if(verbosity >= 1) {
+			else if(options::verbosity >= 1) {
 				std::cout << "Skipping alpha premultiplication..." << std::endl;
 			}
 
@@ -210,12 +210,12 @@ namespace ImOp {
 			}
 
 			if(!options::no_premultiply) {
-				if(verbosity >= 1) {
+				if(options::verbosity >= 1) {
 					std::cout << "Demultiplying alpha..." << std::endl;
 				}
 				std::for_each( imgs.begin(), imgs.end(), ImOp::demultiplyAlpha() );
 			}
-			else if(verbosity >= 1) {
+			else if(options::verbosity >= 1) {
 				std::cout << "Skipping alpha demultiplication..." << std::endl;
 			}
 
