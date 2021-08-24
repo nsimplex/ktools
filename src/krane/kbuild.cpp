@@ -44,9 +44,9 @@ namespace Krane {
 		mask.monochrome(true);
 		mask.fillColor(ColorMono(false));
 
-		list<Drawable> drawable_trigs;
+		vector<Drawable> drawable_trigs;
 		size_t ntrigs = uvwtriangles.size();
-		list<Coordinate> coords;
+		vector<Coordinate> coords;
 		for(size_t i = 0; i < ntrigs; i++) {
 			const uvwtriangle_type& trig = uvwtriangles[i];
 
@@ -96,9 +96,9 @@ namespace Krane {
 
 		// Returned image (clipped quad).
 		Image img = Image(geo, "transparent");
-		img.clipMask(mask);
+		img.readMask(mask);
 		MAGICK_WRAP(img.composite( quad, Geometry(0, 0), OverCompositeOp ));
-		img.clipMask(Image());
+		img.readMask(Image());
 
 
 		// This is to reverse the scaling down applied by the mod tools' scml compiler.
@@ -177,13 +177,13 @@ namespace Krane {
 		// Returned image.
 		Magick::Image markedatlas(atlas.size(), "transparent");
 
-		markedatlas.clipMask(inversemask);
+		markedatlas.readMask(inversemask);
 		MAGICK_WRAP(markedatlas.composite( bg, Geometry(0, 0), OverCompositeOp ));
 
-		markedatlas.clipMask(mask);
+		markedatlas.readMask(mask);
 		MAGICK_WRAP(markedatlas.composite( atlas, Geometry(0, 0), OverCompositeOp ));
 
-		markedatlas.clipMask(Image());
+		markedatlas.readMask(Image());
 
 		markedatlas.flip();
 		return markedatlas;
