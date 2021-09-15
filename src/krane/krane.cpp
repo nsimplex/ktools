@@ -234,7 +234,7 @@ static void configure_bank_collection(KAnimBankCollection& banks) {
 }
 
 static void sanitize_output_png(Magick::Image& img) {
-	img.type(Magick::TrueColorMatteType);
+	img.type(Magick::TrueColorAlphaType);
 	img.colorSpace(Magick::sRGBColorspace);
 
 	// png color type 6 means RGBA
@@ -359,6 +359,6 @@ int main(int argc, char* argv[]) {
 		cerr << "ERROR" << endl;
 		return -1;
 	}
-	
+
 	return 0;
 }

@@ -30,7 +30,7 @@ namespace KTech {
 
 		extern int image_quality;
 
-		extern Magick::FilterTypes filter;
+		extern MagickCore::FilterType filter;
 
 		extern bool no_premultiply;
 

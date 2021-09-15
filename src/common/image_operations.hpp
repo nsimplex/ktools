@@ -29,7 +29,7 @@ namespace KTools {
 	}
 namespace ImOp {
 	typedef std::unary_function<Magick::Image&, void> basic_image_operation_t;
-	typedef std::unary_function<Magick::PixelPacket*, void> basic_pixel_operation_t;
+	typedef std::unary_function<MagickCore::Quantum*, void> basic_pixel_operation_t;
 	typedef std::unary_function<KTEX::File&, void> basic_ktex_operation_t;
 
 	typedef basic_image_operation_t basic_unary_operation_t;
@@ -92,7 +92,7 @@ namespace ImOp {
 
 	typedef operation_t<KTEX::File&> ktex_operation_t;
 
-	typedef operation_t<Magick::PixelPacket*> pixel_operation_t;
+	typedef operation_t<MagickCore::Quantum*> pixel_operation_t;
 
 	///
 
@@ -328,8 +328,8 @@ namespace ImOp {
 		return SequenceWriter<Container>(c);
 	}
 
-	inline Magick::Quantum multiplyQuantum(Magick::Quantum q, double factor) {
-		using namespace Magick;
+	inline MagickCore::Quantum multiplyQuantum(MagickCore::Quantum q, double factor) {
+		using namespace MagickCore;
 
 		const double result = factor*q;
 		if(result >= QuantumRange) {
@@ -342,32 +342,32 @@ namespace ImOp {
 
 	class premultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		virtual void call(Magick::PixelPacket* p) const {
+		virtual void call(MagickCore::Quantum* p) const {
 			using namespace Magick;
 
-			double a = 1 - double(p->opacity)/QuantumRange;
+			double a = double(p[3])/QuantumRange;
 			if(a <= 0.1) a = 0;
 			else if(a >= 1) a = 1;
 
-			p->red = multiplyQuantum(p->red, a);
-			p->green = multiplyQuantum(p->green, a);
-			p->blue = multiplyQuantum(p->blue, a);
+			p[0] = multiplyQuantum(p[0], a);
+			p[1] = multiplyQuantum(p[1], a);
+			p[2] = multiplyQuantum(p[2], a);
 		}
 	};
 
 	class demultiplyPixelAlpha : public pixel_operation_t {
 	public:
-		virtual void call(Magick::PixelPacket* p) const {
+		virtual void call(MagickCore::Quantum* p) const {
 			using namespace Magick;
 
-			const double a = 1 - double(p->opacity)/QuantumRange;
+			const double a = double(p[3])/QuantumRange;
 			if(a <= 0 || a >= 1) return;
 
 			const double inva = 1/a;
 
-			p->red = multiplyQuantum(p->red, inva);
-			p->green = multiplyQuantum(p->green, inva);
-			p->blue = multiplyQuantum(p->blue, inva);
+			p[0] = multiplyQuantum(p[0], inva);
+			p[1] = multiplyQuantum(p[1], inva);
+			p[2] = multiplyQuantum(p[2], inva);
 		}
 	};
 
@@ -377,18 +377,19 @@ namespace ImOp {
 	public:
 		virtual void call(Magick::Image& img) const {
 			using namespace Magick;
-			img.type(TrueColorMatteType);
+			img.type(TrueColorAlphaType);
 			img.modifyImage();
 			
 			Pixels view(img);
 
 			const size_t w = img.columns(), h = img.rows();
 			{
-				PixelPacket * RESTRICT p = view.get(0, 0, w, h);
+				MagickCore::Quantum * RESTRICT p = view.get(0, 0, w, h);
 
 				for(size_t i = 0; i < h; i++) {
 					for(size_t j = 0; j < w; j++) {
-						op(p++);
+						op(p);
+						p += 4;
 					}
 				}
 			}
@@ -420,15 +421,12 @@ namespace ImOp {
 			img.despeckle();
 
 			Image alpha = img;
-			alpha.channel(MatteChannel);
-			alpha.negate();
+			alpha.channel(MagickCore::AlphaChannel);
+			alpha.reduceNoise(static_cast<size_t>(1.6));
 
-			alpha.reduceNoise(1.6);
-
-			img.matte(false);
-			img.composite(alpha, 0, 0, CopyOpacityCompositeOp);
-
-			img.matte(true);
+			img.alpha(false);
+			img.composite(alpha, 0, 0, MagickCore::CopyAlphaCompositeOp);
+			img.alpha(true);
 		}
 	};
 }}
